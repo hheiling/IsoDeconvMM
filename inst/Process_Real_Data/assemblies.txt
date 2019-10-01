@@ -1,0 +1,8 @@
+./SRR1550995/CLOUT2/transcripts.gtf
+./SRR1551016/CLOUT2/transcripts.gtf
+./SRR1551024/CLOUT2/transcripts.gtf
+./SRR1551051/CLOUT2/transcripts.gtf
+./SRR1551071/CLOUT2/transcripts.gtf
+./SRR1551079/CLOUT2/transcripts.gtf
+./SRR1551065/CLOUT2/transcripts.gtf
+./SRR1551098/CLOUT2/transcripts.gtf

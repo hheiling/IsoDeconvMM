@@ -1,0 +1,19 @@
+prefetch -v SRR list
+
+fastq-dump -I --split-files SRR1550989.sra 
+fastq-dump -I --split-files SRR1551000.sra
+fastq-dump -I --split-files SRR1551011.sra
+fastq-dump -I --split-files SRR1551023.sra
+fastq-dump -I --split-files SRR1551043.sra
+fastq-dump -I --split-files SRR1551050.sra
+fastq-dump -I --split-files SRR1551085.sra
+fastq-dump -I --split-files SRR1551111.sra
+fastq-dump -I --split-files SRR1551006.sra
+fastq-dump -I --split-files SRR1551012.sra
+fastq-dump -I --split-files SRR1551017.sra
+fastq-dump -I --split-files SRR1551037.sra
+fastq-dump -I --split-files SRR1551086.sra
+fastq-dump -I --split-files SRR1551099.sra
+fastq-dump -I --split-files SRR1551105.sra
+
+mv *.fastq ../files/

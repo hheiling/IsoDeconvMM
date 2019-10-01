@@ -1,0 +1,17 @@
+cd /netscr/drwilson/SRA_Data_dwnld/files/
+
+bsub -n 12 -R "span[hosts=1]" -o cuffDiff_wnlog.lout -x -q whole_node cuffdiff -p 12 -b /proj/seq/data/archives/hg19/bwa_path/hg19_all.fa -L CD4,CD8 -u ./merged_asm/merged.gtf \
+./SRR1551071/SRR1551071_SBCv2.bam,./SRR1550995/SRR1550995_SBCv2.bam,./SRR1551016/SRR1551016_SBCv2.bam,./SRR1551098/SRR1551098_SBCv2.bam \
+./SRR1551024/SRR1551024_SBCv2.bam,./SRR1551051/SRR1551051_SBCv2.bam,./SRR1551079/SRR1551079_SBCv2.bam,./SRR1551065/SRR1551065_SBCv2.bam
+
+bsub -n 12 -R "span[hosts=1]" -o cmerge_wnlog.lout -x -q whole_node cuffmerge -p 12 -g /netscr/drwilson/Reference_Annotations/Homo_sapiens/Homo_sapiens.GRCh37.66.updated.gtf -s /proj/seq/data/archives/hg19/bwa_path/hg19_all.fa assemblies.txt
+
+
+
+To activate X-Win32 please use the following license key, 87813624-15098890.
+Note: X-Win32 license will key expire on 11/30/2018.
+
+/nas/longleaf/home/drwilson
+
+mv ./SRR1551071/SRR1551071_SBC.bam ./SRR1550995/SRR1550995_SBC.bam ./SRR1551016/SRR1551016_SBC.bam ./SRR1551098/SRR1551098_SBC.bam ../../2018-04-05\ Paper\ 1/MappedData/CD4/
+mv ./SRR1551024/SRR1551024_SBC.bam ./SRR1551051/SRR1551051_SBC.bam ./SRR1551079/SRR1551079_SBC.bam ./SRR1551065/SRR1551065_SBC.bam ../../2018-04-05\ Paper\ 1/MappedData/CD8/
