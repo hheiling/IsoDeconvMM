@@ -231,69 +231,8 @@ info_mat = data.frame(Label = labels, Cell_Type = tolower(cellTypes), Total = to
 fin_geneMod["Sample_Info"] = list(info = info_mat,tclust_tot=length(fin_geneMod),
                                       cellType_count=cellType_count)
 
-# #-------------------------------------------------------------------#
-# # EDIT TO GROUP CELL TYPES                                          #
-# #-------------------------------------------------------------------#
-# info_mat = fin_geneMod[["Sample_Info"]]$info
-# cellTypes = unique(info_mat$Cell_Type)
-# 
-# ctList = list()
-# 
-# for(j in 1:length(cellTypes)){
-#   idx = which(info_mat$Cell_Type==cellTypes[j])
-#   ctList[[cellTypes[j]]] = list(samps = info_mat$Label[idx], tots = info_mat$Total[idx])
-# }
-# 
-# idx2consider = which(names(fin_geneMod)!="Sample_Info")
-# for(k in idx2consider){
-#   for(l in 1:length(cellTypes)){
-#     samps2use = ctList[[l]]$samps
-#     tots      = ctList[[l]]$samps
-#     
-#     y_vecs  = paste("fin_geneMod[[k]]$y",samps2use,sep = "_")
-#     y_vecsc = paste(y_vecs,collapse = ",")
-#     nExon = eval(parse(text=sprintf("length(%s)",y_vecs[1])))
-#     textcmd = sprintf("matrix(c(%s),nrow=nExon,ncol=length(samps2use))",y_vecsc)
-#     expMat  = eval(parse(text=textcmd))
-#     
-#     totmg   = tots-colSums(expMat)
-#     expMat2 = rbind(totmg,expMat)
-#     
-#     fin_geneMod[[k]][[cellTypes[l]]] = expMat2
-#   }
-# }
 
-save(fin_geneMod, file = output)
+# save(fin_geneMod, file = output)
+return(fin_geneMod)
 }
 
-#-------------------------------------------------------------------#
-# EDIT TO GROUP CELL TYPES                                          #
-#-------------------------------------------------------------------#
-# info_mat = fin_geneMod[["Sample_Info"]]$info
-# cellTypes = unique(info_mat$Cell_Type)
-# 
-# ctList = list()
-# 
-# for(j in 1:length(cellTypes)){
-#   idx = which(info_mat$Cell_Type==cellTypes[j])
-#   ctList[[cellTypes[j]]] = list(samps = info_mat$Label[idx], tots = info_mat$Total[idx])
-# }
-# 
-# idx2consider = which(names(fin_geneMod)!="Sample_Info")
-# for(k in idx2consider){
-#   for(l in 1:length(cellTypes)){
-#     samps2use = ctList[[l]]$samps
-#     tots      = ctList[[l]]$samps
-#     
-#     y_vecs  = paste("y",samps2use,sep = "_")
-#     y_vecsc = paste(y_vecs,collapse = ",")
-#     nExon = eval(parse(text=sprintf("length(%s)",y_vecs[1])))
-#     textcmd = sprintf("matrix(c(%s),nrow=nExon,ncol=length(samps2use))",y_vecsc)
-#     expMat  = eval(parse(text=textcmd))
-#     
-#     totmg   = tots-colSums(expMat)
-#     expMat2 = rbind(totmg,expMat)
-#     
-#     fin_geneMod[[k]][[cellTypes[l]]] = expMat2
-#   }
-# }
