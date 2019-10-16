@@ -27,7 +27,7 @@ whichMat<-function(mat,which_idx){
   return(tmp_mat)
 }
 
-# Picking which isoforms to exclude based on correlatoin cutoff:
+# Picking which isoforms to exclude based on correlation cutoff:
 Iso2Excl<-function(pairs){
   delete_iso = c()
   j=0
