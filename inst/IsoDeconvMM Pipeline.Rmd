@@ -94,48 +94,46 @@ library(cummeRbund)
 
 # Had to downgrade to RSQ-lite v 1.1-2
 
-testing = cuffdiff_siggenes(folder = "Cuffdiff_Out",
+finalOut2 = EnsemblIds2Use(folder = "Cuffdiff_Out",
                             directory = "D:/DougData/Documents/Dissertation/Paper 1 - Cell Type Abundance Estimation/Daily Work/1_30_2018/")
-
-
-#------------------ LOAD AND PROCESS GENE NAMES ---------#
-queryList = testing$gene_short_name
-ensIds    = queryMany(queryList,scopes="symbol",fields=c("ensembl.gene"),
-                      species="human",return.as = "records")
-
-ensLink = matrix(NA,ncol=2,nrow=length(ensIds))
-
-for(i in 1:length(ensIds)){
-  if(length(ensIds[[i]]$ensembl)==0){
-    ensLink[i,1] = ensIds[[i]]$query
-  } else {
-    if(length(ensIds[[i]]$ensembl)==1){
-      ensLink[i,1] = ensIds[[i]]$query
-      ensLink[i,2] = ensIds[[i]]$ensembl$gene
-    } else {
-      ensLink[i,1] = ensIds[[i]]$query
-      ensLink[i,2] = ensIds[[i]]$ensembl[[1]]$gene
-    }
-  }
-}
-
-ensLink = as.data.frame(ensLink)
-colnames(ensLink) = c("gene_short_name","Ensembl.ID")
-
-finalOut = merge(testing,ensLink,by="gene_short_name",all.x=TRUE)
-finalOut2 = finalOut[which(!is.na(finalOut$Ensembl.ID)),]
-
-# Final Step 2 Output
-finalOut2 = finalOut2[order(finalOut2$class,finalOut2$p_value),]
-
-# save(file="./Mixture_Creation/EnsemblIds2Use.RData",finalOut2)
 
 ```
 
 Step 3:
 
 ```{r}
+setwd("/netscr/drwilson/2018-04-05 Paper 1/MappedData/Real_Data_Opt/GeneModels/")
 
+files = list.files(pattern = "unred")
+file_labels = gsub(pattern = "unred",replacement = "sigred",x=files)
+
+geneslist = load(file="../../../Programs/EnsemblIds2Use.RData")
+analy_genes = finalOut2$Ensembl.ID
+
+for(j in 1:length(files)){
+  load(files[j])
+
+  indices2chk = which(names(fin_geneMod)!="Sample_Info")
+  indices_tmp = NULL
+  indices=NULL
+  indices_tmp = rep(0,length(geneMod))
+  for(i in indices2chk){
+    infodf = fin_geneMod[[i]]$info
+    genesi = unique(infodf$gene)
+    genesi = unique(unlist(strsplit(x=genesi,split = ":")))
+    if(any(genesi %in% analy_genes)){indices_tmp[i]=1}
+  }
+  indices = which(indices_tmp==1)
+  
+  sig_geneMod = fin_geneMod[indices]
+  sig_geneMod["Sample_Info"] = fin_geneMod["Sample_Info"]
+  
+  sig_geneMod = rem_clust(geneMod = sig_geneMod,co = 5,min_ind = 0)
+  
+  message("File: ",file_labels[j]," // nGenes= ",length(sig_geneMod))
+  
+  save(sig_geneMod,file=file_labels[j])
+}
 ```
 
 The End
