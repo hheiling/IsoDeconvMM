@@ -44,7 +44,7 @@
 #       defined by the mixture samples to reduce modeling complexity.
 
 #' @export
-dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,knownIsoforms,fragSizeFile,output,readLen,lmax,eLenMin){
+dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,knownIsoforms,fragSizeFile,readLen,lmax,eLenMin){
   
 #------------------------------------------------------------------------------------------------------------------------------------#
 # LOADING THE DATA                                                                                                                   #
@@ -232,7 +232,7 @@ fin_geneMod["Sample_Info"] = list(info = info_mat,tclust_tot=length(fin_geneMod)
                                       cellType_count=cellType_count)
 
 
-# save(fin_geneMod, file = output)
+# save(fin_geneMod, file = output) # Removed output from function arguments
 return(fin_geneMod)
 }
 
