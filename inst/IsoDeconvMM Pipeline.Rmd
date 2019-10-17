@@ -1,0 +1,141 @@
+---
+title: "IsoDeconvMM Pipeline"
+author: "Hillary Heiling"
+date: "October 16, 2019"
+output: html_document
+---
+
+## Original Process: GeneModel_Build and later
+
+*Step 1*:  Mixture_Creation / GeneModel_Build.R 
+
+Calls dev_compiles_geneMod() function from isoDeconv_geneModel_revised.R file
+
+Inputs: 
+
+Output: fit_geneMod object
+
+Note: changed output of dev_compiles_geneMod() to be just an object, don't save an .RData object to some folder
+
+*Step 2*:  Mixture_Creation / Restricting_Geneids_Pairwise.R
+
+Establishes transcript clusters with highest levels of discriminatory capability
+
+Library needed: biocLite.R library cummerbund
+
+Inputs: "list_of_genes.txt" name annotation file, Cuffdiff_Out folder
+
+Output: finalOut2 object as EnsembleIds2Use.RData object
+
+*Step 3*:  Process_Real_Data / prepare_sigred.R
+
+Inputs:  fin_geneMod object from *Step 1*, finalOut2 (EnsembleIds2Use.RData) object from *Step 2*
+
+Output: sig_geneMod
+
+*Step 4*:  Mixture_Creation / RecharacterizedOutput.R
+
+Input:
+
+Output:
+
+## Updated Process:
+
+Step 1:
+
+```{r}
+# Required Libraries:
+library(gtools)
+library(IsoDeconvMM)
+
+# Inputs
+file = "g10h90"
+sys_statement1 = sprintf("countData=c(\"mf_%s_counts.txt\",
+                         \"CD4_SRR1550995_SBC_counts.txt\",
+                         \"CD4_SRR1551016_SBC_counts.txt\",
+                         \"CD4_SRR1551098_SBC_counts.txt\",
+                         \"CD8_SRR1551024_SBC_counts.txt\",
+                         \"CD8_SRR1551051_SBC_counts.txt\",
+                         \"CD8_SRR1551065_SBC_counts.txt\")",file)
+eval(parse(text=sys_statement1))
+labels = c("mix","CD4_ref1","CD4_ref2","CD4_ref3",
+           "CD8_ref1","CD8_ref2","CD8_ref3")
+cellTypes = c("mix","CD4","CD4","CD4",
+              "CD8","CD8","CD8")
+fragSizeFile = sprintf("/netscr/drwilson/2018-04-05 Paper 1/Frag_Lengths/%s_fraglens.txt",file)
+bedFile = "/netscr/drwilson/Reference_Annotations/Homo_sapiens/Homo_sapiens.GRCh37.66.nonoverlap.exon.bed"
+knownIsoforms = "/netscr/drwilson/Reference_Annotations/Homo_sapiens/Homo_sapiens.GRCh37.66.nonoverlap.exon.knownIsoforms.RData"
+output = sprintf("unred_%s_geneMod.RData",file)
+readLen=50
+lmax=600
+eLenMin=1
+
+# Call dev_compiled_geneMod function
+fin_geneMod = dev_compiled_geneMod(countData=countData,labels = labels,total_cts = total_cts, 
+                     cellTypes=cellTypes, bedFile=bedFile,knownIsoforms=knownIsoforms,
+                     fragSizeFile=fragSizeFile,output=output,readLen=readLen,lmax=lmax,
+                     eLenMin=eLenMin)
+```
+
+Step 2:
+
+```{r}
+#-----------------------------------------------------------------------------#
+# ESTABLISHING CLUSTERS WITH HIGHEST LEVELS OF DISCRIMINATORY CAPABILITY      #
+#-----------------------------------------------------------------------------#
+#------------------ LOAD AND PROCESS GENE NAMES -------------------#
+anno_names = read.table(file = "D:/DougData/Documents/Genomics Training Grant/Update_12_10_2014/FINAL/Article/list_of_genes.txt",header = TRUE,sep = ",")
+anno_names$gene_short_name = anno_names$Associated.Gene.Name
+
+#------------------ CALL THE LIBRARY ------------------#
+source("https://bioconductor.org/biocLite.R")
+biocLite("cummeRbund")
+library(cummeRbund)
+
+# Had to downgrade to RSQ-lite v 1.1-2
+
+testing = cuffdiff_siggenes(folder = "Cuffdiff_Out",
+                            directory = "D:/DougData/Documents/Dissertation/Paper 1 - Cell Type Abundance Estimation/Daily Work/1_30_2018/")
+
+
+#------------------ LOAD AND PROCESS GENE NAMES ---------#
+queryList = testing$gene_short_name
+ensIds    = queryMany(queryList,scopes="symbol",fields=c("ensembl.gene"),
+                      species="human",return.as = "records")
+
+ensLink = matrix(NA,ncol=2,nrow=length(ensIds))
+
+for(i in 1:length(ensIds)){
+  if(length(ensIds[[i]]$ensembl)==0){
+    ensLink[i,1] = ensIds[[i]]$query
+  } else {
+    if(length(ensIds[[i]]$ensembl)==1){
+      ensLink[i,1] = ensIds[[i]]$query
+      ensLink[i,2] = ensIds[[i]]$ensembl$gene
+    } else {
+      ensLink[i,1] = ensIds[[i]]$query
+      ensLink[i,2] = ensIds[[i]]$ensembl[[1]]$gene
+    }
+  }
+}
+
+ensLink = as.data.frame(ensLink)
+colnames(ensLink) = c("gene_short_name","Ensembl.ID")
+
+finalOut = merge(testing,ensLink,by="gene_short_name",all.x=TRUE)
+finalOut2 = finalOut[which(!is.na(finalOut$Ensembl.ID)),]
+
+# Final Step 2 Output
+finalOut2 = finalOut2[order(finalOut2$class,finalOut2$p_value),]
+
+# save(file="./Mixture_Creation/EnsemblIds2Use.RData",finalOut2)
+
+```
+
+Step 3:
+
+```{r}
+
+```
+
+The End
