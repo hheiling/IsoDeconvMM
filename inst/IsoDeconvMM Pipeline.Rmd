@@ -35,13 +35,17 @@ Output: sig_geneMod
 
 *Step 4*:  Mixture_Creation / RecharacterizedOutput.R
 
-Input:
+Input: The sig_geneMod object from Step 3
 
-Output:
+Output:  Slightly modified version of sig_geneMod object
+
+*Step 5*: 
 
 ## Updated Process:
 
 Step 1:
+
+Note: need to generalize to multiple files
 
 ```{r}
 # Required Libraries:
@@ -70,12 +74,26 @@ readLen=50
 lmax=600
 eLenMin=1
 
-# Call dev_compiled_geneMod function
-fin_geneMod = dev_compiled_geneMod(countData=countData,labels = labels,total_cts = total_cts, 
-                     cellTypes=cellTypes, bedFile=bedFile,knownIsoforms=knownIsoforms,
-                     fragSizeFile=fragSizeFile,output=output,readLen=readLen,lmax=lmax,
-                     eLenMin=eLenMin)
 ```
+
+Suppose the above process has been generalized to multiple files
+
+```{r}
+files = file
+
+final_geneMod = list()
+
+for(j in 1:length(files)){
+  # Call dev_compiled_geneMod function
+  fin_geneMod = dev_compiled_geneMod(countData=countData,labels = labels,total_cts = total_cts, 
+                       cellTypes=cellTypes, bedFile=bedFile,knownIsoforms=knownIsoforms,
+                       fragSizeFile=fragSizeFile,output=output,readLen=readLen,lmax=lmax,
+                       eLenMin=eLenMin)
+  final_geneMod[[j]] = fin_geneMod
+}
+
+```
+
 
 Step 2:
 
@@ -104,19 +122,18 @@ Step 3:
 ```{r}
 setwd("/netscr/drwilson/2018-04-05 Paper 1/MappedData/Real_Data_Opt/GeneModels/")
 
-files = list.files(pattern = "unred")
-file_labels = gsub(pattern = "unred",replacement = "sigred",x=files)
-
-geneslist = load(file="../../../Programs/EnsemblIds2Use.RData")
 analy_genes = finalOut2$Ensembl.ID
 
-for(j in 1:length(files)){
-  load(files[j])
+significant_geneMod = list()
 
+for(j in 1:length(final_geneMod)){
+
+  fin_geneMod = final_geneMod[[j]]
+  
   indices2chk = which(names(fin_geneMod)!="Sample_Info")
   indices_tmp = NULL
   indices=NULL
-  indices_tmp = rep(0,length(geneMod))
+  indices_tmp = rep(0,length(geneMod)) # What is this geneMod object?
   for(i in indices2chk){
     infodf = fin_geneMod[[i]]$info
     genesi = unique(infodf$gene)
@@ -130,10 +147,78 @@ for(j in 1:length(files)){
   
   sig_geneMod = rem_clust(geneMod = sig_geneMod,co = 5,min_ind = 0)
   
-  message("File: ",file_labels[j]," // nGenes= ",length(sig_geneMod))
+  # message("File: ",file_labels[j]," // nGenes= ",length(sig_geneMod))
+  # 
+  # save(sig_geneMod,file=file_labels[j])
   
-  save(sig_geneMod,file=file_labels[j])
+  significant_geneMod[[j]] = sig_geneMod
 }
 ```
+
+Step 4:
+
+```{r}
+#-------------------------------------------------------------------------#
+# Setting the Input Directory                                             #
+#-------------------------------------------------------------------------#
+
+library(gtools)
+
+setwd("/netscr/drwilson/2018-04-05 Paper 1/Programs/")
+source("geneModel_multcell_edit.R")
+source("loadData_edit.R")
+source("isoDeconv_geneModel_revised.R")
+source("pdist_gen.R")
+source("EffectiveLength_Total.R")
+
+setwd("/netscr/drwilson/2018-04-05 Paper 1/MappedData/Real_Data_Opt/GeneModels/")
+
+#-------------------------------------------------------------------------#
+# CALL the geneMod Functions                                              #
+#-------------------------------------------------------------------------#
+output = sprintf("sigred_%s_geneMod.RData",file)
+
+load(output)
+
+#-------------------------------------------------------------------#
+# EDIT TO GROUP CELL TYPES                                          #
+#-------------------------------------------------------------------#
+info_mat = sig_geneMod[["Sample_Info"]]
+cellTypes = unique(info_mat$Cell_Type)
+
+ctList = list()
+
+for(j in 1:length(cellTypes)){
+  idx = which(info_mat$Cell_Type==cellTypes[j])
+  ctList[[cellTypes[j]]] = list(samps = info_mat$Label[idx], tots = info_mat$Total[idx])
+}
+
+idx2consider = which(names(sig_geneMod)!="Sample_Info")
+for(k in idx2consider){
+  for(l in 1:length(cellTypes)){
+    samps2use = ctList[[l]]$samps
+    tots      = ctList[[l]]$tots
+
+    y_vecs  = paste("sig_geneMod[[k]]$y",samps2use,sep = "_")
+    y_vecsc = paste(y_vecs,collapse = ",")
+    nExon = eval(parse(text=sprintf("length(%s)",y_vecs[1])))
+    textcmd = sprintf("matrix(c(%s),nrow=nExon,ncol=length(samps2use))",y_vecsc)
+    expMat  = eval(parse(text=textcmd))
+
+    totmg   = tots-colSums(expMat)
+    expMat2 = rbind(totmg,expMat)
+
+    if(cellTypes[l]!="mix"){
+      sig_geneMod[[k]][[cellTypes[l]]] = list(cellType=cellTypes[l],rds_exons=expMat2)
+    } else {
+      sig_geneMod[[k]][[cellTypes[l]]] = list(cellType=cellTypes[l],rds_exons_t=expMat2)
+    }
+    
+  }
+}
+
+save(sig_geneMod,file=sprintf("rechar_%s_geneMod.RData",file))
+```
+
 
 The End
