@@ -44,38 +44,38 @@ bam2use = BAM_list
 #Loop across all BAM files in the folder:
 for(i in 1:length(BAM_list)){
 
-bami = bam2use[i]
-
-#Generates a name that can be used in the files by stripping 
-#off the .BAM extension:
-sami = substr(bam2use[i],start=1,stop=nchar(bam2use[i])-4)
-
-# ----------------------------------------------------------
-# counting
-# ----------------------------------------------------------
-ctF  = sprintf("_count/count_%s.txt", sami)
-cmd1 = sprintf("samtools view %s | wc -l >> %s\n", bam2use[i], ctF)
-system(cmd1)
-
-# ----------------------------------------------------------
-# sorting
-# ----------------------------------------------------------
-cmd2 = sprintf("samtools sort -n %s _count/%s_sorted_by_name", bam2use[i], sami)
-system(cmd2)
-bamF = sprintf("_count/%s_sorted_by_name.bam", sami)
-
-# ----------------------------------------------------------
-# getUnique and filtering
-# ----------------------------------------------------------
-prepareBAM(bamF, sprintf("_count/%s_sorted_by_name", sami), sortIt=FALSE)
-
-system(sprintf("rm %s", bamF))
-
-# ----------------------------------------------------------
-# counting again
-# ----------------------------------------------------------
-cmd3   = sprintf("samtools view _count/%s_sorted_by_name_uniq_filtered.bam | wc -l >> %s\n", sami, ctF)
-system(cmd3)
+  bami = bam2use[i]
+  
+  #Generates a name that can be used in the files by stripping 
+  #off the .BAM extension:
+  sami = substr(bam2use[i],start=1,stop=nchar(bam2use[i])-4)
+  
+  # ----------------------------------------------------------
+  # counting
+  # ----------------------------------------------------------
+  ctF  = sprintf("_count/count_%s.txt", sami)
+  cmd1 = sprintf("samtools view %s | wc -l >> %s\n", bam2use[i], ctF)
+  system(cmd1)
+  
+  # ----------------------------------------------------------
+  # sorting
+  # ----------------------------------------------------------
+  cmd2 = sprintf("samtools sort -n %s _count/%s_sorted_by_name", bam2use[i], sami)
+  system(cmd2)
+  bamF = sprintf("_count/%s_sorted_by_name.bam", sami)
+  
+  # ----------------------------------------------------------
+  # getUnique and filtering
+  # ----------------------------------------------------------
+  prepareBAM(bamF, sprintf("_count/%s_sorted_by_name", sami), sortIt=FALSE)
+  
+  system(sprintf("rm %s", bamF))
+  
+  # ----------------------------------------------------------
+  # counting again
+  # ----------------------------------------------------------
+  cmd3   = sprintf("samtools view _count/%s_sorted_by_name_uniq_filtered.bam | wc -l >> %s\n", sami, ctF)
+  system(cmd3)
 }
 
 

@@ -107,12 +107,16 @@ fragLengths<-function(Input_Files,outputLabels,comboList,comboLabels,useCombo){
     }
   } else if(useCombo==1 && missing(comboList)){
     stop("If you wish to combine files, you must list which files are to be combined!")
-  } else {
+    
+  } else { # comboList specified, and useCombo = 1
+    
     ftc = unlist(lapply(X = comboList,FUN = function(x) {return(paste(x,collapse=" "))}))
+    
     for(k in 1:length(comboList)){
       cmd2_b = sprintf("cat %s | sort -n | uniq -c > %s_fraglens.txt",ftc[k],comboLabels[k])
       system(cmd2_b)
     }
+    
   }
 }
 

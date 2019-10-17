@@ -38,10 +38,11 @@ sams = gsub("_sorted_by_name_uniq_filtered.bam", "", ffs)
 
 for(i in 1:length(ffs)){
 
-sam1 = sams[i]
-cat(i, sam1, date(), "\n")
-
-bamFile = ffs[i]
-outFile = sprintf("%s_counts.txt", sam1)
-
-countReads(bamFile, bedFile, outFile)}
+  sam1 = sams[i]
+  cat(i, sam1, date(), "\n")
+  
+  bamFile = ffs[i]
+  outFile = sprintf("%s_counts.txt", sam1)
+  
+  countReads(bamFile, bedFile, outFile)
+}
