@@ -1,12 +1,12 @@
 
 #' @import cummeRbund 
 #' @export
-cuffdiff_siggenes<-function(folder){
-  folder = "Cuffdiff_Out"
+cuffdiff_siggenes<-function(folder, directory){
+  
   #-------------------------------------------------------------------#
   # READ-In Data                                                      #
   #-------------------------------------------------------------------#
-  setwd("D:/DougData/Documents/Dissertation/Paper 1 - Cell Type Abundance Estimation/Daily Work/1_30_2018/")
+  setwd(directory)
   cuffdiff_total<- readCufflinks(folder,rebuild = T)
   
   #-------------------------------------------------------------------#
