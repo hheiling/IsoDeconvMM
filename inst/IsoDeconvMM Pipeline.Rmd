@@ -39,7 +39,11 @@ Input: The sig_geneMod object from Step 3
 
 Output:  Slightly modified version of sig_geneMod object
 
-*Step 5*: 
+*Step 5*: Run pure sample production functions
+
+Input: The modified sig_geneMod object from Step 4
+
+Ouput: 
 
 ## Updated Process:
 
@@ -158,67 +162,118 @@ for(j in 1:length(final_geneMod)){
 Step 4:
 
 ```{r}
-#-------------------------------------------------------------------------#
-# Setting the Input Directory                                             #
-#-------------------------------------------------------------------------#
 
 library(gtools)
-
-setwd("/netscr/drwilson/2018-04-05 Paper 1/Programs/")
-source("geneModel_multcell_edit.R")
-source("loadData_edit.R")
-source("isoDeconv_geneModel_revised.R")
-source("pdist_gen.R")
-source("EffectiveLength_Total.R")
-
-setwd("/netscr/drwilson/2018-04-05 Paper 1/MappedData/Real_Data_Opt/GeneModels/")
-
-#-------------------------------------------------------------------------#
-# CALL the geneMod Functions                                              #
-#-------------------------------------------------------------------------#
-output = sprintf("sigred_%s_geneMod.RData",file)
-
-load(output)
 
 #-------------------------------------------------------------------#
 # EDIT TO GROUP CELL TYPES                                          #
 #-------------------------------------------------------------------#
-info_mat = sig_geneMod[["Sample_Info"]]
-cellTypes = unique(info_mat$Cell_Type)
 
-ctList = list()
+modified_sig_geneMod = list()
 
-for(j in 1:length(cellTypes)){
-  idx = which(info_mat$Cell_Type==cellTypes[j])
-  ctList[[cellTypes[j]]] = list(samps = info_mat$Label[idx], tots = info_mat$Total[idx])
+for(f in 1:length(significant_geneMod)){
+  
+  sig_geneMod = significant_geneMod[[f]]
+  
+  info_mat = sig_geneMod[["Sample_Info"]]
+  cellTypes = unique(info_mat$Cell_Type)
+  
+  ctList = list()
+  
+  for(j in 1:length(cellTypes)){
+    idx = which(info_mat$Cell_Type==cellTypes[j])
+    ctList[[cellTypes[j]]] = list(samps = info_mat$Label[idx], tots = info_mat$Total[idx])
+  }
+  
+  idx2consider = which(names(sig_geneMod)!="Sample_Info")
+  for(k in idx2consider){
+    for(l in 1:length(cellTypes)){
+      samps2use = ctList[[l]]$samps
+      tots      = ctList[[l]]$tots
+  
+      y_vecs  = paste("sig_geneMod[[k]]$y",samps2use,sep = "_")
+      y_vecsc = paste(y_vecs,collapse = ",")
+      nExon = eval(parse(text=sprintf("length(%s)",y_vecs[1])))
+      textcmd = sprintf("matrix(c(%s),nrow=nExon,ncol=length(samps2use))",y_vecsc)
+      expMat  = eval(parse(text=textcmd))
+  
+      totmg   = tots-colSums(expMat)
+      expMat2 = rbind(totmg,expMat)
+  
+      if(cellTypes[l]!="mix"){
+        sig_geneMod[[k]][[cellTypes[l]]] = list(cellType=cellTypes[l],rds_exons=expMat2)
+      } else {
+        sig_geneMod[[k]][[cellTypes[l]]] = list(cellType=cellTypes[l],rds_exons_t=expMat2)
+      }
+      
+    }
+  }
+  
+  modified_sig_geneMod[[f]] = sig_geneMod
+  # save(sig_geneMod,file=sprintf("rechar_%s_geneMod.RData",file))
 }
 
-idx2consider = which(names(sig_geneMod)!="Sample_Info")
-for(k in idx2consider){
-  for(l in 1:length(cellTypes)){
-    samps2use = ctList[[l]]$samps
-    tots      = ctList[[l]]$tots
+```
 
-    y_vecs  = paste("sig_geneMod[[k]]$y",samps2use,sep = "_")
-    y_vecsc = paste(y_vecs,collapse = ",")
-    nExon = eval(parse(text=sprintf("length(%s)",y_vecs[1])))
-    textcmd = sprintf("matrix(c(%s),nrow=nExon,ncol=length(samps2use))",y_vecsc)
-    expMat  = eval(parse(text=textcmd))
+Step 5:
 
-    totmg   = tots-colSums(expMat)
-    expMat2 = rbind(totmg,expMat)
+```{r}
+# Call_Model / Revised_Sim_PS_codeNew.R code process
+#-------------------------------------------------------------------#
+# REVISED SIMULATION CODE                                           #
+#-------------------------------------------------------------------#
+library(gtools)
+library(alabama)
 
-    if(cellTypes[l]!="mix"){
-      sig_geneMod[[k]][[cellTypes[l]]] = list(cellType=cellTypes[l],rds_exons=expMat2)
-    } else {
-      sig_geneMod[[k]][[cellTypes[l]]] = list(cellType=cellTypes[l],rds_exons_t=expMat2)
-    }
-    
+setwd("/netscr/drwilson/2018-04-05 Paper 1/Programs/")
+  source("PS Production Functions (Err Control).R")
+
+setwd("/netscr/drwilson/2018-04-05 Paper 1/MappedData/GeneModels/")
+
+#-----------------------------------------------------------#
+# CALL Pure Sample                                          #
+#-----------------------------------------------------------#
+cellTypes = c("cd4","cd8")
+
+f.curr = sprintf("./rechar_%s_geneMod.RData",file)
+load(f.curr)
+
+sim.out = sig_geneMod[which(names(sig_geneMod)!="Sample_Info")]
+
+# Clusters with single isoforms:
+#  EXCLUDE THEM FOR THE MOMENT!.
+dim_mat = matrix(0,nrow=length(sim.out),ncol=2)
+excl_clust = c()
+excl_clust2 = c()
+for(i in 1:length(sim.out)){
+  dim_mat[i,] = dim(sim.out[[i]][["X"]])
+  if(all(dim_mat[i,]==c(1,1))){
+    excl_clust = c(excl_clust,i)
+  }
+  if(dim_mat[i,2] == 1){
+    excl_clust2 = c(excl_clust2,i)
   }
 }
 
-save(sig_geneMod,file=sprintf("rechar_%s_geneMod.RData",file))
+excl_clust_union = union(excl_clust,excl_clust2)
+if(length(excl_clust_union)>0){
+  sim.new = sim.out[-c(excl_clust_union)]
+} else {
+  sim.new = sim.out
+}
+
+
+# Optimize the Pure Sample Functions:
+tmp.data = Pure.apply.fun(data.list = sim.new,cellTypes = cellTypes,corr_co = 1)
+save_cmd = sprintf("save(tmp.data,file=\"../Compiled_Output/%s_pure_est.RData\")",file)
+eval(parse(text=save_cmd))
+
+message("Sample ",file,"Completed")
+
 ```
 
+## Edit of Updated Process
+
+Note: Once I'm confident the "Updated Process" steps above work as expected, I will modularize some steps (create some additional functions). Ideally, it would be nice to have just one "wrapper" function where all of the inputs go and one output.
 
 The End
