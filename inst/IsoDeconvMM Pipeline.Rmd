@@ -7,18 +7,30 @@ output: html_document
 
 ## Items needed before Step 0:
 
-* .bam files of mixture and pure samples (not .bam.bai)
+* .bam files of mixture and pure samples (not .bai)
 * Cuffdiff output
 
 ## Original Process: Before GeneModel_Build.R file and corresponding processes
 
 *Step 0.1*: step1_check_and_filter.R
 
+Input: .bam files - mixed and pure sample files
 
+Output: "_sorted_by_name_uniq_filterd.bam" files (_count/ folder in Doug's code)
 
 *Step 0.2*: step2_read_depth.R
 
+Diagnostics only. Optional?
+
+Input: "count_ ... .txt" files from Step 0.1
+
+Output: Summary plot (pdf)
+
 *Step 0.3*: step3_countReads.R
+
+Inputs: .bed file, all "_sorted_by_name_unique_filtered.bam" files from Step 0.1
+
+Output: "_counts.txt" file from countReads() function from `isoform` library
 
 *Step 0.4*: step4_summarize_counts.r
 
@@ -28,8 +40,122 @@ output: html_document
 
 Step 0.1:
 
+Thoughts: Need to run in command line (source the R file)
+
+```{r}
+library(asSeq)
+
+intputDir = "where/.bam/files/are"
+outputDir = "Count/"
+#------------------------------------------------------------------
+# Generating BAM file List            
+#------------------------------------------------------------------
+
+#Set working directory to folder where BAM files are located:
+setwd(inputDir)
+
+#Generate initial list of files: (NOTE- .bam.bai files included)
+init_list = list.files(pattern=".bam")
+
+#Generate list of .bai files
+int_list = list.files(pattern=".bai")
+
+#Final List (excluding .bai files):
+BAM_list = setdiff(init_list,int_list)
+
+# -----------------------------------------------------------------
+# check the bam files
+# -----------------------------------------------------------------
+
+#Checks length of BAM files to ensure all has run properly:
+length(BAM_list)
+
+#Displays BAM list as another check for errors:
+BAM_list
+
+bam2use = BAM_list
+
+#Loop across all BAM files in the folder:
+for(i in 1:length(BAM_list)){
+
+  bami = bam2use[i]
+  
+  #Generates a name that can be used in the files by stripping 
+  #off the .BAM extension:
+  sami = substr(bam2use[i],start=1,stop=nchar(bam2use[i])-4)
+  
+  # ----------------------------------------------------------
+  # counting
+  # ----------------------------------------------------------
+  ctF  = sprintf("%s/count_%s.txt", outputDir,sami)
+  cmd1 = sprintf("samtools view %s | wc -l >> %s\n", bam2use[i], ctF)
+  system(cmd1)
+  
+  # ----------------------------------------------------------
+  # sorting
+  # ----------------------------------------------------------
+  cmd2 = sprintf("samtools sort -n %s %s/%s_sorted_by_name", bam2use[i], outputDir, sami)
+  system(cmd2)
+  bamF = sprintf("%s/%s_sorted_by_name.bam", outputDir, sami)
+  
+  # ----------------------------------------------------------
+  # getUnique and filtering
+  # ----------------------------------------------------------
+  prepareBAM(bamF, sprintf("%s/%s_sorted_by_name", outputDir, sami), sortIt=FALSE)
+  
+  system(sprintf("rm %s", bamF))
+  
+  # ----------------------------------------------------------
+  # counting again
+  # ----------------------------------------------------------
+  cmd3   = sprintf("samtools view %s/%s_sorted_by_name_uniq_filtered.bam | wc -l >> %s\n", outputDir, sami, ctF)
+  system(cmd3)
+}
+
+```
+
+Step 0.2: Diagnostics only
+
+Step 0.3
+
 ```{r}
 
+#--------------------------------------------------------------------------------------
+# ISOFORM Software Library Access
+#--------------------------------------------------------------------------------------
+library(isoform, lib.loc="/nas02/home/d/r/drwilson/R/Rlibraries/") 
+
+#------------------------------------------------------------------------------------------------
+# Set bedFile (once identified and downloaded)               
+#------------------------------------------------------------------------------------------------
+bedFile = "/netscr/drwilson/Reference_Annotations/Homo_sapiens/Homo_sapiens.GRCh37.66.nonoverlap.exon.bed"
+
+#------------------------------------------------------------------------------------------------
+# Set Working Directory
+#------------------------------------------------------------------------------------------------
+setwd(inputDir)
+
+#------------------------------------------------------------------------------------------------
+# Loop across all replicates and files:
+#        For loop assumes that all files within a class (ECC1, HMEC, GM12878) have same bed File.
+#------------------------------------------------------------------------------------------------
+
+cmd  = "ls *_sorted_by_name_uniq_filtered.bam"
+ffs  = system(cmd, intern=TRUE)
+length(ffs)
+head(ffs)
+sams = gsub("_sorted_by_name_uniq_filtered.bam", "", ffs)
+
+for(i in 1:length(ffs)){
+
+  sam1 = sams[i]
+  cat(i, sam1, date(), "\n")
+  
+  bamFile = ffs[i]
+  outFile = sprintf("%s_counts.txt", sam1)
+  
+  countReads(bamFile, bedFile, outFile)
+}
 ```
 
 
