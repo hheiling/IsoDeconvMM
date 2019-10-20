@@ -43,13 +43,13 @@ Output:  Slightly modified version of sig_geneMod object
 
 Input: The modified sig_geneMod object from Step 4
 
-Ouput: 
+Ouput: tmp.data = output from Pure.apply.fun() function from pure sample production functions file.
 
 ## Updated Process:
 
 Step 1:
 
-Note: need to generalize to multiple files
+Note: need to generalize to multiple files (multiple combinations of one mixture and all cell type references)
 
 ```{r}
 # Required Libraries:
@@ -57,7 +57,8 @@ library(gtools)
 library(IsoDeconvMM)
 
 # Inputs
-file = "g10h90"
+file = "g10h90" # Should be one of the comboLabels provided in FragLengths_Function_mixture.R
+
 sys_statement1 = sprintf("countData=c(\"mf_%s_counts.txt\",
                          \"CD4_SRR1550995_SBC_counts.txt\",
                          \"CD4_SRR1551016_SBC_counts.txt\",
@@ -217,58 +218,135 @@ for(f in 1:length(significant_geneMod)){
 
 Step 5:
 
+Note: Confused about what files are used here
+
 ```{r}
 # Call_Model / Revised_Sim_PS_codeNew.R code process
-#-------------------------------------------------------------------#
-# REVISED SIMULATION CODE                                           #
-#-------------------------------------------------------------------#
+
 library(gtools)
 library(alabama)
-
-setwd("/netscr/drwilson/2018-04-05 Paper 1/Programs/")
-  source("PS Production Functions (Err Control).R")
-
-setwd("/netscr/drwilson/2018-04-05 Paper 1/MappedData/GeneModels/")
 
 #-----------------------------------------------------------#
 # CALL Pure Sample                                          #
 #-----------------------------------------------------------#
 cellTypes = c("cd4","cd8")
 
-f.curr = sprintf("./rechar_%s_geneMod.RData",file)
-load(f.curr)
+pure_est = list()
 
-sim.out = sig_geneMod[which(names(sig_geneMod)!="Sample_Info")]
+for(j in 1:length(modified_sig_geneMod)){
+  
+  sig_geneMod = modified_sig_geneMod[[j]]
+  
+  sim.out = sig_geneMod[which(names(sig_geneMod)!="Sample_Info")]
 
-# Clusters with single isoforms:
-#  EXCLUDE THEM FOR THE MOMENT!.
-dim_mat = matrix(0,nrow=length(sim.out),ncol=2)
-excl_clust = c()
-excl_clust2 = c()
-for(i in 1:length(sim.out)){
-  dim_mat[i,] = dim(sim.out[[i]][["X"]])
-  if(all(dim_mat[i,]==c(1,1))){
-    excl_clust = c(excl_clust,i)
+  # Clusters with single isoforms:
+  # EXCLUDE THEM FOR THE MOMENT!.
+  dim_mat = matrix(0,nrow=length(sim.out),ncol=2)
+  excl_clust = c()
+  excl_clust2 = c()
+  for(i in 1:length(sim.out)){
+    dim_mat[i,] = dim(sim.out[[i]][["X"]])
+    if(all(dim_mat[i,]==c(1,1))){
+      excl_clust = c(excl_clust,i)
+    }
+    if(dim_mat[i,2] == 1){
+      excl_clust2 = c(excl_clust2,i)
+    }
   }
-  if(dim_mat[i,2] == 1){
-    excl_clust2 = c(excl_clust2,i)
+  
+  excl_clust_union = union(excl_clust,excl_clust2)
+  if(length(excl_clust_union)>0){
+    sim.new = sim.out[-c(excl_clust_union)]
+  } else {
+    sim.new = sim.out
   }
+  
+  
+  # Optimize the Pure Sample Functions:
+  tmp.data = Pure.apply.fun(data.list = sim.new, cellTypes = cellTypes, corr_co = 1)
+  
+  # save_cmd = sprintf("save(tmp.data,file=\"../Compiled_Output/%s_pure_est.RData\")",file)
+  # eval(parse(text=save_cmd))
+  
+  pure_est[[j]] = tmp.data
+  
+  # message("Sample ",file,"Completed")
+    
 }
 
-excl_clust_union = union(excl_clust,excl_clust2)
-if(length(excl_clust_union)>0){
-  sim.new = sim.out[-c(excl_clust_union)]
-} else {
-  sim.new = sim.out
+
+
+```
+
+Multiple Cluster: (Revised_Sim_Mix_Calls_MI.R)
+
+```{r}
+files = list.files(pattern = "pure_est.RData")
+samps = gsub(pattern = "_pure_est.RData",replacement = "",x = files)
+
+for(i in 1:length(files)){
+  #--------------------------------------------------------#
+  # LOAD CURRENT FILE                                      #
+  #--------------------------------------------------------#
+  #--- Set Directory ---#
+  # Combat any directory switches 
+  curr.file = sprintf("./%s_pure_est.RData",samps[i])
+  load(curr.file) 
+  
+  #--------------------------------------------------------#
+  # Establish input break ups                              #
+  #--------------------------------------------------------#
+  # Cell-Types:
+  cellTypes = c("cd4","cd8")
+  
+  # Data Set Necessities:
+  clust.start = 1
+  clust.end = length(tmp.data)
+  by.value = 15
+  
+  start.pts = seq(from = 1,to = clust.end,by = by.value)
+  end.pts = c((start.pts[-1]-1),clust.end)
+  
+  setwd("/netscr/drwilson/2018-04-05 Paper 1/Programs/")
+  for(m in 1:length(start.pts)){
+    fname = sprintf("%s_pure_est.RData",samps[i])
+    cloud.job.cmd = sprintf("bsub -o ./Run_Output/job_sub_%s.txt R CMD BATCH --no-save --no-restore '--args start.pt=%s end.pt=%s file_name=\"%s\" file=\"%s\"' Revised_Sim_MixCode_SI.R ./Run_Output/rsub_mix_%s.txt",
+                            samps[i],start.pts[m],end.pts[m],fname,samps[i],samps[i])
+    system(cloud.job.cmd)
+  }
+  curr.dir = sprintf("/netscr/drwilson/2018-04-05 Paper 1/MappedData/Real_Data_Opt/Compiled_Output/")
+  setwd(curr.dir)
 }
 
+```
 
-# Optimize the Pure Sample Functions:
-tmp.data = Pure.apply.fun(data.list = sim.new,cellTypes = cellTypes,corr_co = 1)
-save_cmd = sprintf("save(tmp.data,file=\"../Compiled_Output/%s_pure_est.RData\")",file)
-eval(parse(text=save_cmd))
+Single Cluster: (Revised_Sim_MixCode_SI.R)
 
-message("Sample ",file,"Completed")
+```{r}
+setwd("/netscr/drwilson/2018-04-05 Paper 1/Programs/")
+source("Production Functions (Err_Control_MI_v2).R")
+library(alabama)
+
+#--- Load Data ---#
+curr.dir = sprintf("/netscr/drwilson/2018-04-05 Paper 1/MappedData/Real_Data_Opt/Compiled_Output/")
+setwd(curr.dir)
+load(file_name)
+
+#--------------------------------------------------------#
+# Establish input break ups                              #
+#--------------------------------------------------------#
+# Save Directory:
+setwd(sprintf("./%s/",file))
+
+# Cell-Types:
+cellTypes = c("cd4","cd8")
+
+curr.clust.opt = tmp.data[c(start.pt:end.pt)]
+curr.clust.out = STG.Update_Cluster.All(all_data=curr.clust.opt,cellTypes = cellTypes,optimType="nlminb",simple.Init=FALSE,initPts=c(0.5))
+
+outFile = sprintf("./%s/%s_c%s_%s.RData",file,file,start.pt,end.pt)
+
+save(curr.clust.out,file=outFile)
 
 ```
 
