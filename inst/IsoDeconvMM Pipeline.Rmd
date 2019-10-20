@@ -5,6 +5,34 @@ date: "October 16, 2019"
 output: html_document
 ---
 
+## Items needed before Step 0:
+
+* .bam files of mixture and pure samples (not .bam.bai)
+* Cuffdiff output
+
+## Original Process: Before GeneModel_Build.R file and corresponding processes
+
+*Step 0.1*: step1_check_and_filter.R
+
+
+
+*Step 0.2*: step2_read_depth.R
+
+*Step 0.3*: step3_countReads.R
+
+*Step 0.4*: step4_summarize_counts.r
+
+*Step 0.5*: FragLengths_Function_mixutre.R
+
+## Updated Process: Step 0
+
+Step 0.1:
+
+```{r}
+
+```
+
+
 ## Original Process: GeneModel_Build and later
 
 *Step 1*:  Mixture_Creation / GeneModel_Build.R 
@@ -45,7 +73,7 @@ Input: The modified sig_geneMod object from Step 4
 
 Ouput: tmp.data = output from Pure.apply.fun() function from pure sample production functions file.
 
-## Updated Process:
+## Updated Process: GeneModel_Build.R and later
 
 Step 1:
 
@@ -74,7 +102,6 @@ cellTypes = c("mix","CD4","CD4","CD4",
 fragSizeFile = sprintf("/netscr/drwilson/2018-04-05 Paper 1/Frag_Lengths/%s_fraglens.txt",file)
 bedFile = "/netscr/drwilson/Reference_Annotations/Homo_sapiens/Homo_sapiens.GRCh37.66.nonoverlap.exon.bed"
 knownIsoforms = "/netscr/drwilson/Reference_Annotations/Homo_sapiens/Homo_sapiens.GRCh37.66.nonoverlap.exon.knownIsoforms.RData"
-output = sprintf("unred_%s_geneMod.RData",file)
 readLen=50
 lmax=600
 eLenMin=1
@@ -278,20 +305,21 @@ for(j in 1:length(modified_sig_geneMod)){
 
 ```
 
-Multiple Cluster: (Revised_Sim_Mix_Calls_MI.R)
+Step 6:
+
+Multiple Cluster code: (Revised_Sim_Mix_Calls_MI.R)
+
+Calls Single Cluster code: (Revised_Sim_MixCode_SI.R)
 
 ```{r}
-files = list.files(pattern = "pure_est.RData")
-samps = gsub(pattern = "_pure_est.RData",replacement = "",x = files)
 
-for(i in 1:length(files)){
-  #--------------------------------------------------------#
-  # LOAD CURRENT FILE                                      #
-  #--------------------------------------------------------#
-  #--- Set Directory ---#
-  # Combat any directory switches 
-  curr.file = sprintf("./%s_pure_est.RData",samps[i])
-  load(curr.file) 
+library(alabama)
+
+IsoDeconv_Output = list()
+
+for(i in 1:length(pure_est)){
+  
+  tmp.data = pure_est[[i]]
   
   #--------------------------------------------------------#
   # Establish input break ups                              #
@@ -307,48 +335,22 @@ for(i in 1:length(files)){
   start.pts = seq(from = 1,to = clust.end,by = by.value)
   end.pts = c((start.pts[-1]-1),clust.end)
   
-  setwd("/netscr/drwilson/2018-04-05 Paper 1/Programs/")
+  cluster_output = list()
   for(m in 1:length(start.pts)){
-    fname = sprintf("%s_pure_est.RData",samps[i])
-    cloud.job.cmd = sprintf("bsub -o ./Run_Output/job_sub_%s.txt R CMD BATCH --no-save --no-restore '--args start.pt=%s end.pt=%s file_name=\"%s\" file=\"%s\"' Revised_Sim_MixCode_SI.R ./Run_Output/rsub_mix_%s.txt",
-                            samps[i],start.pts[m],end.pts[m],fname,samps[i],samps[i])
-    system(cloud.job.cmd)
+    
+    # Call Revised_Sim_MixCode_SI.R code
+    curr.clust.opt = tmp.data[c(start.pt:end.pt)]
+    curr.clust.out = STG.Update_Cluster.All(all_data=curr.clust.opt, cellTypes = cellTypes,
+                                            optimType="nlminb", simple.Init=FALSE, initPts=c(0.5))
+    
+    cluster_output[[m]] = curr.clust.out
   }
-  curr.dir = sprintf("/netscr/drwilson/2018-04-05 Paper 1/MappedData/Real_Data_Opt/Compiled_Output/")
-  setwd(curr.dir)
+  
+  IsoDeconv_Output[[i]] = cluster_output
 }
 
 ```
 
-Single Cluster: (Revised_Sim_MixCode_SI.R)
-
-```{r}
-setwd("/netscr/drwilson/2018-04-05 Paper 1/Programs/")
-source("Production Functions (Err_Control_MI_v2).R")
-library(alabama)
-
-#--- Load Data ---#
-curr.dir = sprintf("/netscr/drwilson/2018-04-05 Paper 1/MappedData/Real_Data_Opt/Compiled_Output/")
-setwd(curr.dir)
-load(file_name)
-
-#--------------------------------------------------------#
-# Establish input break ups                              #
-#--------------------------------------------------------#
-# Save Directory:
-setwd(sprintf("./%s/",file))
-
-# Cell-Types:
-cellTypes = c("cd4","cd8")
-
-curr.clust.opt = tmp.data[c(start.pt:end.pt)]
-curr.clust.out = STG.Update_Cluster.All(all_data=curr.clust.opt,cellTypes = cellTypes,optimType="nlminb",simple.Init=FALSE,initPts=c(0.5))
-
-outFile = sprintf("./%s/%s_c%s_%s.RData",file,file,start.pt,end.pt)
-
-save(curr.clust.out,file=outFile)
-
-```
 
 ## Edit of Updated Process
 
