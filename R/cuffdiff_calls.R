@@ -56,3 +56,42 @@ cuffdiff_siggenes<-function(folder, directory){
   
   return(testing)
 }
+
+#' @import cummeRbund
+#' @export
+EnsemblIds2Use = function(folder, directory){
+  
+  testing = cuffdiff_siggenes(folder = folder, directory)
+  
+  #------------------ LOAD AND PROCESS GENE NAMES ---------#
+  queryList = testing$gene_short_name
+  ensIds    = queryMany(queryList,scopes="symbol",fields=c("ensembl.gene"),
+                        species="human",return.as = "records")
+  
+  ensLink = matrix(NA,ncol=2,nrow=length(ensIds))
+  
+  for(i in 1:length(ensIds)){
+    if(length(ensIds[[i]]$ensembl)==0){
+      ensLink[i,1] = ensIds[[i]]$query
+    } else {
+      if(length(ensIds[[i]]$ensembl)==1){
+        ensLink[i,1] = ensIds[[i]]$query
+        ensLink[i,2] = ensIds[[i]]$ensembl$gene
+      } else {
+        ensLink[i,1] = ensIds[[i]]$query
+        ensLink[i,2] = ensIds[[i]]$ensembl[[1]]$gene
+      }
+    }
+  }
+  
+  ensLink = as.data.frame(ensLink)
+  colnames(ensLink) = c("gene_short_name","Ensembl.ID")
+  
+  finalOut = merge(testing,ensLink,by="gene_short_name",all.x=TRUE)
+  finalOut2 = finalOut[which(!is.na(finalOut$Ensembl.ID)),]
+  
+  # Final Output
+  finalOut2 = finalOut2[order(finalOut2$class,finalOut2$p_value),]
+  
+  return(finalOut2)
+}
