@@ -14,7 +14,9 @@ output: html_document
 
 *Step 0.1*: step1_check_and_filter.R
 
-Input: .bam files - mixed and pure sample files
+Input: .bam files - mixed and pure sample files, or pure samples only?
+
+Based on FragLenths_Function_mixture.R, probably just the pure samples need to go through this process.
 
 Output: "_sorted_by_name_uniq_filterd.bam" files (_count/ folder in Doug's code)
 
@@ -34,7 +36,24 @@ Output: "_counts.txt" file from countReads() function from `isoform` library
 
 *Step 0.4*: step4_summarize_counts.r
 
+Inputs: 
+
+* Some .RData object (Homo_sapiens.GRCh37.66.nTE.RData, or its equivalent)
+* The "_counts.txt" files from step 0.3
+
+Output: A dataset with the gene counts matrix with file name "gene_counts_%d_%d.txt"
+
+Thoughts: Since I haven't seen where the gene_counts_..._.txt files are used, perhaps this is optional for the overall process and is instead only used for diagnostic purposes?
+
 *Step 0.5*: FragLengths_Function_mixutre.R
+
+Inputs: Mixture .bam files, pure sample reference "_sorted_by_name_unique_filtered.bam" files from Step 0.1.
+
+Process: Create combinations of files where there is one mixture file and all cell reference files, then run the fragSizeFile process (see isoform vignette) on this file combination.
+
+Outputs: fragSizeFile with suffix "_fraglens.txt" for the one mixture + all reference files combinations.
+
+Note: Will need to run code in R in the command line
 
 ## Updated Process: Step 0
 
@@ -46,7 +65,7 @@ Thoughts: Need to run in command line (source the R file)
 library(asSeq)
 
 intputDir = "where/.bam/files/are"
-outputDir = "Count/"
+outputFolder = "Count/"
 #------------------------------------------------------------------
 # Generating BAM file List            
 #------------------------------------------------------------------
@@ -87,28 +106,28 @@ for(i in 1:length(BAM_list)){
   # ----------------------------------------------------------
   # counting
   # ----------------------------------------------------------
-  ctF  = sprintf("%s/count_%s.txt", outputDir,sami)
+  ctF  = sprintf("%s/count_%s.txt", outputFolder,sami)
   cmd1 = sprintf("samtools view %s | wc -l >> %s\n", bam2use[i], ctF)
   system(cmd1)
   
   # ----------------------------------------------------------
   # sorting
   # ----------------------------------------------------------
-  cmd2 = sprintf("samtools sort -n %s %s/%s_sorted_by_name", bam2use[i], outputDir, sami)
+  cmd2 = sprintf("samtools sort -n %s %s/%s_sorted_by_name", bam2use[i], outputFolder, sami)
   system(cmd2)
-  bamF = sprintf("%s/%s_sorted_by_name.bam", outputDir, sami)
+  bamF = sprintf("%s/%s_sorted_by_name.bam", outputFolder, sami)
   
   # ----------------------------------------------------------
   # getUnique and filtering
   # ----------------------------------------------------------
-  prepareBAM(bamF, sprintf("%s/%s_sorted_by_name", outputDir, sami), sortIt=FALSE)
+  prepareBAM(bamF, sprintf("%s/%s_sorted_by_name", outputFolder, sami), sortIt=FALSE)
   
   system(sprintf("rm %s", bamF))
   
   # ----------------------------------------------------------
   # counting again
   # ----------------------------------------------------------
-  cmd3   = sprintf("samtools view %s/%s_sorted_by_name_uniq_filtered.bam | wc -l >> %s\n", outputDir, sami, ctF)
+  cmd3   = sprintf("samtools view %s/%s_sorted_by_name_uniq_filtered.bam | wc -l >> %s\n", outputFolder, sami, ctF)
   system(cmd3)
 }
 
@@ -116,14 +135,19 @@ for(i in 1:length(BAM_list)){
 
 Step 0.2: Diagnostics only
 
-Step 0.3
+Step 0.3:
+
+Note: Run in command line (source the R code)
 
 ```{r}
+
+# Input directory: has the "sorted_by_name_uniq_filtered.bam" files
+inputDir = "original_inputDir/outputFolder"
 
 #--------------------------------------------------------------------------------------
 # ISOFORM Software Library Access
 #--------------------------------------------------------------------------------------
-library(isoform, lib.loc="/nas02/home/d/r/drwilson/R/Rlibraries/") 
+library(isoform) 
 
 #------------------------------------------------------------------------------------------------
 # Set bedFile (once identified and downloaded)               
@@ -158,6 +182,327 @@ for(i in 1:length(ffs)){
 }
 ```
 
+Step 0.4:
+
+```{r}
+#---------------------------------------------------------------------------------
+# Set Working Directory [EDIT]
+#---------------------------------------------------------------------------------
+
+setwd("/netscr/drwilson/2015-06-19 Refined Half Simulate/Mixture Files/_counts/")
+
+#---------------------------------------------------------------------------------
+# Load/Organize Gene List into Matrix Form
+#---------------------------------------------------------------------------------
+
+load("/netscr/drwilson/Homo_sapiens.GRCh37.66.nTE.RData")
+dim(nTE)
+nTE[1:2,]
+length(unique(nTE$geneId))
+
+# Lists all count files in the current directory. Assigns number of such files
+# to the idx2 random variable. To be used in looping.
+
+ffs  = list.files(pattern="_counts.txt")
+nn   = length(ffs)
+ffs[1:2]
+nn
+idx2<-nn
+
+# Creates matrix of following form:
+#  -> One geneID per row
+#  -> One Cell Line Sample per column
+#  -> Count for gene i in sample j is cell value
+
+# Labels rows by GeneID, labels columns (samples) by file name.
+
+sams  = gsub("_counts.txt", "", ffs)
+couts = matrix(0, nrow=nrow(nTE), ncol=(idx2-1+1))
+colnames(couts) = sams[1:idx2]
+rownames(couts) = nTE$geneId
+
+#---------------------------------------------------------------------------------
+# READ IN SAMPLE DATA:
+#
+# Reads in output from step 3 (countReads) and organizes it into a matrix form.
+# Column 1: Read Count
+# Column 2: Reference site (Transcript Cluster, Gene ID, Exons involved) 
+#---------------------------------------------------------------------------------
+
+for(idx in 1:idx2){
+  
+  cat(idx, date(), "\n")
+  
+  f1   = ffs[idx]
+  dat  = scan(f1, what=character(0))  
+  dat  = matrix(dat, ncol=2, byrow=TRUE);
+ 
+  colNames = c("count", "exons")
+  cN = sprintf("%s and %s", colNames[1], colNames[2])
+ 
+# Error Checking: if a row does not have two columns, the procedure
+# halts and warns the user.
+
+  if(ncol(dat) != 2){
+    stop(countFile, " should have 2 columns: ", cN, "\n")
+  }
+  
+  colnames(dat) = colNames
+  dim(dat)
+  dat[1:2,]
+  
+#---------------------------------------------------------------------------------
+# OBTAIN TRANSCRIPT CLUSTERS AND GENE IDS
+#---------------------------------------------------------------------------------
+  
+# Splits each string from column 2 (reference sites) of the dat matrix into 3
+# components: (i) Transcript cluster, (ii) Ensembl Gene ID, (iii) Exon Cluster.
+# Output is a list of exon sets, one list for each line of original dat matrix.
+
+  groupIDs = strsplit(dat[,"exons"], split=";|\\|", perl=TRUE)
+  
+# Creates function that will be used to extract the UNIQUE gene IDs from within
+# each exon set.
+
+  splitFun <- function(vx){
+    unique(vx[grep("ENSG", vx)])
+  }
+  
+#Extract unique geneIDs for each exon set read count.
+
+  date()
+  geneIDs = lapply(groupIDs, splitFun)
+  date()
+  geneIDs[1:2]
+  
+#---------------------------------------------------------------------------------
+# DATA CHECKING:
+#     This section assesses the number of unique gene IDs present for each exon 
+# set/read count. If more than one unique geneID is present for an exon set,
+# its reads are excluded. If only one geneID is present, these reads are assigned
+# to that gene.
+#---------------------------------------------------------------------------------
+ 
+  ngIDs   = sapply(geneIDs, length)
+  table(ngIDs)
+  
+  w2check = which(ngIDs > 1)
+  
+  chkGIDs <- function(g1){
+    gkp    = ""
+    ncombo = sum(!grepl(":", g1, fixed=TRUE))
+    
+    if(ncombo <= 1){
+      g2s = strsplit(g1, split=":", fixed=TRUE)
+      gus = unique(unlist(g2s))
+      foundONE = FALSE
+      
+      for(gu1 in gus){
+        if (all(grepl(gu1, g1))){
+          if(foundONE){  
+            gkp = ""
+            break
+          }else{
+            foundONE = TRUE
+            gkp = gu1
+          }
+        }
+      }
+    }
+    
+    gkp
+  }
+
+  gIDchk  = sapply(geneIDs[w2check], chkGIDs)
+  length(gIDchk)
+  gIDchk[1:4]
+  
+  geneIDs[w2check] = gIDchk
+  n1      = length(geneIDs)
+  geneIDs = unlist(geneIDs)
+  if(n1 != length(geneIDs)){ stop("non-unique geneIDs\n") }
+  
+  gID2rm = w2check[which(gIDchk=="")]
+  str1   = "combinations are skipped because they belong to different genes"
+  message(length(gID2rm), " exon ", str1)
+  
+  dim(dat)
+  if(length(gID2rm) > 0){
+    dat     = dat[-gID2rm,]
+    geneIDs = geneIDs[-gID2rm]
+  }
+  
+  dim(dat)
+  length(unique(geneIDs))
+  
+#---------------------------------------------------------------------------------
+# RECORDING COUNTS:
+#---------------------------------------------------------------------------------
+ 
+# Converts counts from data matrix from character to numeric. Sums across all
+# exon sets with the same, unique (after previous step), geneID.
+
+  cts     = as.numeric(dat[,"count"])
+  geneCts = tapply(cts, geneIDs, sum)
+ 
+# Matches geneIDs from the geneCts matrix above with the nTE data set geneIDs
+# for proper almagamation.
+ 
+  mat1    = match(names(geneCts), nTE$geneId)
+  wNotNA  = which(! is.na(mat1))
+ 
+# Provides information on the number of geneIDs skipped during the process
+# due to: (i) having two geneIDs present in read. 
+
+  pp1 = round(sum(geneCts[-wNotNA])/sum(geneCts),4)
+  nn1 = length(geneCts) - length(wNotNA)
+  message(100*pp1, "% of reads @ ", nn1, " exon combinations are skipped\n")
+
+# Updates original countmatrix with counts from the current sample passed through
+# the for loop.
+
+  couts[mat1[wNotNA],idx-1+1] = geneCts[wNotNA]
+}
+
+# Outputs a dataset with the gene counts matrix.
+
+outF = sprintf("gene_counts_%d_%d.txt", 1, idx2)
+
+write.table(couts, file = outF, append = FALSE, quote = FALSE, sep = "\t",
+row.names = TRUE, col.names = TRUE)
+
+
+
+```
+
+Step 0.5 
+
+```{r}
+#-------------------------------------------------------------#
+# Fragment Length Files: Generation                           #
+#-------------------------------------------------------------#
+
+# Specify Directory where read files are kept:
+fragSizeDir = "bam_file_directory"
+setwd(fragSizeDir)
+
+# BAM Files where sequenced reads are located:
+inputFiles = c("./Mixtures/merged/mf_CD4_0_CD8_100.bam",
+               "./Mixtures/merged/mf_CD4_10_CD8_90.bam",
+               "./Mixtures/merged/mf_CD4_20_CD8_80.bam",
+               "./Mixtures/merged/mf_CD4_30_CD8_70.bam",
+               "./Mixtures/merged/mf_CD4_40_CD8_60.bam",
+               "./Mixtures/merged/mf_CD4_50_CD8_50.bam",
+               "./Mixtures/merged/mf_CD4_60_CD8_40.bam",
+               "./Mixtures/merged/mf_CD4_70_CD8_30.bam",
+               "./Mixtures/merged/mf_CD4_80_CD8_20.bam",
+               "./Mixtures/merged/mf_CD4_90_CD8_10.bam",
+               "./Mixtures/merged/mf_CD4_100_CD8_0.bam",
+               "./CD4/_count/SRR1550995_SBC_sorted_by_name_uniq_filtered.bam",
+               "./CD4/_count/SRR1551016_SBC_sorted_by_name_uniq_filtered.bam",
+               "./CD4/_count/SRR1551098_SBC_sorted_by_name_uniq_filtered.bam",
+               "./CD8/_count/SRR1551024_SBC_sorted_by_name_uniq_filtered.bam",
+               "./CD8/_count/SRR1551051_SBC_sorted_by_name_uniq_filtered.bam",
+               "./CD8/_count/SRR1551065_SBC_sorted_by_name_uniq_filtered.bam")
+
+# Associated Labels for output files:
+outputLabels = c("cd4_0_cd8_100",
+                 "cd4_10_cd8_90",
+                 "cd4_20_cd8_80",
+                 "cd4_30_cd8_70",
+                 "cd4_40_cd8_60",
+                 "cd4_50_cd8_50",
+                 "cd4_60_cd8_40",
+                 "cd4_70_cd8_30",
+                 "cd4_80_cd8_20",
+                 "cd4_90_cd8_10",
+                 "cd4_100_cd8_0",
+                 "cd4_r1",
+                 "cd4_r2",
+                 "cd4_r3",
+                 "cd8_r1",
+                 "cd8_r2",
+                 "cd8_r3")
+
+# If any files are to be combined, list them in separate units:
+comboList = list()
+comboList[[1]] = c("cd4_r1_lengths.txt","cd4_r2_lengths.txt","cd4_r3_lengths.txt",
+                   "cd8_r1_lengths.txt","cd8_r2_lengths.txt","cd8_r3_lengths.txt",
+                   "cd4_0_cd8_100_lengths.txt")
+comboList[[2]] = c("cd4_r1_lengths.txt","cd4_r2_lengths.txt","cd4_r3_lengths.txt",
+                   "cd8_r1_lengths.txt","cd8_r2_lengths.txt","cd8_r3_lengths.txt",
+                   "cd4_10_cd8_90_lengths.txt")
+comboList[[3]] = c("cd4_r1_lengths.txt","cd4_r2_lengths.txt","cd4_r3_lengths.txt",
+                   "cd8_r1_lengths.txt","cd8_r2_lengths.txt","cd8_r3_lengths.txt",
+                   "cd4_20_cd8_80_lengths.txt")
+comboList[[4]] = c("cd4_r1_lengths.txt","cd4_r2_lengths.txt","cd4_r3_lengths.txt",
+                   "cd8_r1_lengths.txt","cd8_r2_lengths.txt","cd8_r3_lengths.txt",
+                   "cd4_30_cd8_70_lengths.txt")
+comboList[[5]] = c("cd4_r1_lengths.txt","cd4_r2_lengths.txt","cd4_r3_lengths.txt",
+                   "cd8_r1_lengths.txt","cd8_r2_lengths.txt","cd8_r3_lengths.txt",
+                   "cd4_40_cd8_60_lengths.txt")
+comboList[[6]] = c("cd4_r1_lengths.txt","cd4_r2_lengths.txt","cd4_r3_lengths.txt",
+                   "cd8_r1_lengths.txt","cd8_r2_lengths.txt","cd8_r3_lengths.txt",
+                   "cd4_50_cd8_50_lengths.txt")
+comboList[[7]] = c("cd4_r1_lengths.txt","cd4_r2_lengths.txt","cd4_r3_lengths.txt",
+                   "cd8_r1_lengths.txt","cd8_r2_lengths.txt","cd8_r3_lengths.txt",
+                   "cd4_60_cd8_40_lengths.txt")
+comboList[[8]] = c("cd4_r1_lengths.txt","cd4_r2_lengths.txt","cd4_r3_lengths.txt",
+                   "cd8_r1_lengths.txt","cd8_r2_lengths.txt","cd8_r3_lengths.txt",
+                   "cd4_70_cd8_30_lengths.txt")
+comboList[[9]] = c("cd4_r1_lengths.txt","cd4_r2_lengths.txt","cd4_r3_lengths.txt",
+                   "cd8_r1_lengths.txt","cd8_r2_lengths.txt","cd8_r3_lengths.txt",
+                   "cd4_80_cd8_20_lengths.txt")
+comboList[[10]] = c("cd4_r1_lengths.txt","cd4_r2_lengths.txt","cd4_r3_lengths.txt",
+                   "cd8_r1_lengths.txt","cd8_r2_lengths.txt","cd8_r3_lengths.txt",
+                   "cd4_90_cd8_10_lengths.txt")
+comboList[[11]] = c("cd4_r1_lengths.txt","cd4_r2_lengths.txt","cd4_r3_lengths.txt",
+                   "cd8_r1_lengths.txt","cd8_r2_lengths.txt","cd8_r3_lengths.txt",
+                   "cd4_100_cd8_0_lengths.txt")
+
+# Combo Output Labels:
+comboLabels = c("cd4_0_cd8_100",
+                 "cd4_10_cd8_90",
+                 "cd4_20_cd8_80",
+                 "cd4_30_cd8_70",
+                 "cd4_40_cd8_60",
+                 "cd4_50_cd8_50",
+                 "cd4_60_cd8_40",
+                 "cd4_70_cd8_30",
+                 "cd4_80_cd8_20",
+                 "cd4_90_cd8_10",
+                 "cd4_100_cd8_0")
+
+
+fragLengths<-function(Input_Files,outputLabels,comboList,comboLabels,useCombo){
+  outLabels = paste(outputLabels,"_lengths.txt",sep="")
+  for(i in 1: length(Input_Files)){
+    cmd1 = sprintf("samtools view -f 65 %s | awk '{print ($8>=$4) ? $8-$4+51 : $4-$8+51}' > %s",inputFiles[i],outLabels[i])
+    system(cmd1)
+  }
+  
+  if(missing(comboList) && useCombo==0){
+    for(j in 1:length(outLabels)){
+      cmd2_a = sprintf("cat %s | sort -n | uniq -c > %s_fraglens.txt",outLabels[j],outputLabels[j])
+      system(cmd2_a)
+    }
+  } else if(useCombo==1 && missing(comboList)){
+    stop("If you wish to combine files, you must list which files are to be combined!")
+    
+  } else { # comboList specified, and useCombo = 1
+    
+    ftc = unlist(lapply(X = comboList,FUN = function(x) {return(paste(x,collapse=" "))}))
+    
+    for(k in 1:length(comboList)){
+      cmd2_b = sprintf("cat %s | sort -n | uniq -c > %s_fraglens.txt",ftc[k],comboLabels[k])
+      system(cmd2_b)
+    }
+    
+  }
+}
+
+fragLengths(Input_Files = inputFiles,outputLabels=outputLabels,comboList = comboList,comboLabels=comboLabels,useCombo=1)
+```
 
 ## Original Process: GeneModel_Build and later
 
