@@ -14,9 +14,11 @@ output: html_document
 
 *Step 0.1*: step1_check_and_filter.R
 
-Input: .bam files - mixed and pure sample files, or pure samples only?
+Input: .bam files - mixed and pure sample files
 
-Based on FragLenths_Function_mixture.R, probably just the pure samples need to go through this process.
+[[Note: In real data case, both mixed and pure samples. In the simulated case when the mixed samples are derivatives of the pure samples, only need to run process on pure samples, then create mixtures based on the pure sample output (see below). Reference: FragLengths_Function_mixture.R]]
+
+Note: Need "_counts.txt" files for both mixture and pure samples in Step 1, which are created in Step 0.3. Seems need to run this process on both mixture and pure samples.
 
 Output: "_sorted_by_name_uniq_filterd.bam" files (_count/ folder in Doug's code)
 
@@ -43,13 +45,15 @@ Inputs:
 
 Output: A dataset with the gene counts matrix with file name "gene_counts_%d_%d.txt"
 
-Thoughts: Since I haven't seen where the gene_counts_..._.txt files are used, perhaps this is optional for the overall process and is instead only used for diagnostic purposes?
+Note: I haven't seen where the gene_counts_..._.txt files are used.
 
 *Step 0.5*: FragLengths_Function_mixutre.R
 
-Inputs: Mixture .bam files, pure sample reference "_sorted_by_name_unique_filtered.bam" files from Step 0.1.
+Inputs: Mixture .bam files (in the non-simulated process, also of type "_sorted_by_name_unique_filtered.bam"), pure sample reference "_sorted_by_name_unique_filtered.bam" files from Step 0.1.
 
 Process: Create combinations of files where there is one mixture file and all cell reference files, then run the fragSizeFile process (see isoform vignette) on this file combination.
+
+Wei Sun: "Basically, it combines samtools command and unix command awk to evaluate the fragment length. Say you have a paired end read and you know what the two ends are mapped. Then you can find how long is the whole fragment."
 
 Outputs: fragSizeFile with suffix "_fraglens.txt" for the one mixture + all reference files combinations.
 
@@ -65,7 +69,7 @@ Thoughts: Need to run in command line (source the R file)
 library(asSeq)
 
 intputDir = "where/.bam/files/are"
-outputFolder = "Count/"
+outputFolder = "IsoDeconvMM_Materials/" # Originally, _count/ folder for Doug
 #------------------------------------------------------------------
 # Generating BAM file List            
 #------------------------------------------------------------------
@@ -133,7 +137,7 @@ for(i in 1:length(BAM_list)){
 
 ```
 
-Step 0.2: Diagnostics only
+Step 0.2: Diagnostics only (?)
 
 Step 0.3:
 
@@ -141,18 +145,19 @@ Note: Run in command line (source the R code)
 
 ```{r}
 
+#--------------------------------------------------------------------------------------
+# Set Parameters
+#--------------------------------------------------------------------------------------
+
 # Input directory: has the "sorted_by_name_uniq_filtered.bam" files
-inputDir = "original_inputDir/outputFolder"
+inputDir = "IsoDeconvMM_Materials/" # Output folder from Step 0.1
+# BED file (once identified and downloaded)
+bedFile = "/netscr/drwilson/Reference_Annotations/Homo_sapiens/Homo_sapiens.GRCh37.66.nonoverlap.exon.bed"
 
 #--------------------------------------------------------------------------------------
 # ISOFORM Software Library Access
 #--------------------------------------------------------------------------------------
 library(isoform) 
-
-#------------------------------------------------------------------------------------------------
-# Set bedFile (once identified and downloaded)               
-#------------------------------------------------------------------------------------------------
-bedFile = "/netscr/drwilson/Reference_Annotations/Homo_sapiens/Homo_sapiens.GRCh37.66.nonoverlap.exon.bed"
 
 #------------------------------------------------------------------------------------------------
 # Set Working Directory
@@ -185,17 +190,25 @@ for(i in 1:length(ffs)){
 Step 0.4:
 
 ```{r}
+
+#---------------------------------------------------------------------------------
+# Set Parameters
+#---------------------------------------------------------------------------------
+
+# inputDir = same input directory from step 3 
+gene_list = "/netscr/drwilson/Homo_sapiens.GRCh37.66.nTE.RData"
+
 #---------------------------------------------------------------------------------
 # Set Working Directory [EDIT]
 #---------------------------------------------------------------------------------
 
-setwd("/netscr/drwilson/2015-06-19 Refined Half Simulate/Mixture Files/_counts/")
+setwd(inputDir)
 
 #---------------------------------------------------------------------------------
 # Load/Organize Gene List into Matrix Form
 #---------------------------------------------------------------------------------
 
-load("/netscr/drwilson/Homo_sapiens.GRCh37.66.nTE.RData")
+load(gene_list)
 dim(nTE)
 nTE[1:2,]
 length(unique(nTE$geneId))
@@ -382,9 +395,13 @@ Step 0.5
 # Fragment Length Files: Generation                           #
 #-------------------------------------------------------------#
 
+#-------------------------------------------------------------#
+# Set Parameters
+#-------------------------------------------------------------#
+
 # Specify Directory where read files are kept:
-fragSizeDir = "bam_file_directory"
-setwd(fragSizeDir)
+# inputDir same input directory as step 0.3 (output directory of step 0.1)
+setwd(inputDir)
 
 # BAM Files where sequenced reads are located:
 inputFiles = c("./Mixtures/merged/mf_CD4_0_CD8_100.bam",
@@ -501,10 +518,13 @@ fragLengths<-function(Input_Files,outputLabels,comboList,comboLabels,useCombo){
   }
 }
 
-fragLengths(Input_Files = inputFiles,outputLabels=outputLabels,comboList = comboList,comboLabels=comboLabels,useCombo=1)
+fragLengths(Input_Files = inputFiles, outputLabels=outputLabels, comboList = comboList,
+            comboLabels=comboLabels, useCombo=1)
 ```
 
 ## Original Process: GeneModel_Build and later
+
+Note: Need to repeat process for each mixture file. These steps describe process for one mixture file (and all pure files).
 
 *Step 1*:  Mixture_Creation / GeneModel_Build.R 
 
@@ -512,9 +532,20 @@ Calls dev_compiles_geneMod() function from isoDeconv_geneModel_revised.R file
 
 Inputs: 
 
+* countData = Vector of "_counts.txt" files from Step 0.3 (mixture and pure counts). One mixture file, all pure sample reference files
+* labels = c("mix", "pure1_ref1", ..., "pure1_refp1", ..., "purek_refpk")
+* total_cts = Vector of the total read count (in millions) for each RNA-seq read file. One element for each file. Can probably get from summing up all counts in each countData object
+* cellTypes = c("mix", rep("pure1", times = p1), ..., rep("purek", times = pk))
+* fragSizeFile = "_fraglens.txt" result from FragLenths_Function_mixture.R file (Step 0.5)
+* bedFile = BED file
+* knownIsoforms =
+* readLen = read length, e.g. 75 bp or 100 pb. Get from sequencing data
+* lmax = maximum fragment length
+* eLenMin = 1
+
 Output: fit_geneMod object
 
-Note: changed output of dev_compiles_geneMod() to be just an object, don't save an .RData object to some folder
+Note: Changed output of dev_compiles_geneMod() to be just an object, don't save an .RData object to some folder
 
 *Step 2*:  Mixture_Creation / Restricting_Geneids_Pairwise.R
 
@@ -548,7 +579,7 @@ Ouput: tmp.data = output from Pure.apply.fun() function from pure sample product
 
 Step 1:
 
-Note: need to generalize to multiple files (multiple combinations of one mixture and all cell type references)
+Note: need to generalize to multiple files (multiple combinations of one mixture and all cell type references). Perhaps run a loop for all mixture files
 
 ```{r}
 # Required Libraries:
@@ -604,6 +635,7 @@ Step 2:
 #-----------------------------------------------------------------------------#
 # ESTABLISHING CLUSTERS WITH HIGHEST LEVELS OF DISCRIMINATORY CAPABILITY      #
 #-----------------------------------------------------------------------------#
+
 #------------------ LOAD AND PROCESS GENE NAMES -------------------#
 anno_names = read.table(file = "D:/DougData/Documents/Genomics Training Grant/Update_12_10_2014/FINAL/Article/list_of_genes.txt",header = TRUE,sep = ",")
 anno_names$gene_short_name = anno_names$Associated.Gene.Name
@@ -615,6 +647,10 @@ library(cummeRbund)
 
 # Had to downgrade to RSQ-lite v 1.1-2
 
+#------------------ Identify Highly Discriminatory Clusters -------------------#
+
+# Run Cuffdiff, then point to the location of the Cuffdiff output folder and the name of the folder
+
 finalOut2 = EnsemblIds2Use(folder = "Cuffdiff_Out",
                             directory = "D:/DougData/Documents/Dissertation/Paper 1 - Cell Type Abundance Estimation/Daily Work/1_30_2018/")
 
@@ -623,7 +659,6 @@ finalOut2 = EnsemblIds2Use(folder = "Cuffdiff_Out",
 Step 3:
 
 ```{r}
-setwd("/netscr/drwilson/2018-04-05 Paper 1/MappedData/Real_Data_Opt/GeneModels/")
 
 analy_genes = finalOut2$Ensembl.ID
 
@@ -636,7 +671,9 @@ for(j in 1:length(final_geneMod)){
   indices2chk = which(names(fin_geneMod)!="Sample_Info")
   indices_tmp = NULL
   indices=NULL
-  indices_tmp = rep(0,length(geneMod)) # What is this geneMod object?
+  # indices_tmp = rep(0,length(geneMod)) # What is this geneMod object?
+  # Idea: should be fin_geneMod instead of geneMod
+  indices_tmp = rep(0,length(fin_geneMod))
   for(i in indices2chk){
     infodf = fin_geneMod[[i]]$info
     genesi = unique(infodf$gene)
@@ -649,10 +686,6 @@ for(j in 1:length(final_geneMod)){
   sig_geneMod["Sample_Info"] = fin_geneMod["Sample_Info"]
   
   sig_geneMod = rem_clust(geneMod = sig_geneMod,co = 5,min_ind = 0)
-  
-  # message("File: ",file_labels[j]," // nGenes= ",length(sig_geneMod))
-  # 
-  # save(sig_geneMod,file=file_labels[j])
   
   significant_geneMod[[j]] = sig_geneMod
 }
@@ -709,7 +742,7 @@ for(f in 1:length(significant_geneMod)){
   }
   
   modified_sig_geneMod[[f]] = sig_geneMod
-  # save(sig_geneMod,file=sprintf("rechar_%s_geneMod.RData",file))
+  
 }
 
 ```
@@ -763,12 +796,7 @@ for(j in 1:length(modified_sig_geneMod)){
   # Optimize the Pure Sample Functions:
   tmp.data = Pure.apply.fun(data.list = sim.new, cellTypes = cellTypes, corr_co = 1)
   
-  # save_cmd = sprintf("save(tmp.data,file=\"../Compiled_Output/%s_pure_est.RData\")",file)
-  # eval(parse(text=save_cmd))
-  
   pure_est[[j]] = tmp.data
-  
-  # message("Sample ",file,"Completed")
     
 }
 
