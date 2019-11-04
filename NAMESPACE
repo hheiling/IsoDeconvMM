@@ -2,5 +2,5 @@
 
 import(cummeRbund)
 importFrom(isoform,effLen)
-importFrom(isoform,geneMod)
+importFrom(isoform,geneModel)
 importFrom(isoform,loadData)
