@@ -1,11 +1,13 @@
 Package: IsoDeconvMM
 Type: Package
 Title: What the package does (short line)
-Version: 1.0
+Version: 0.0.1
 Date: 2019-09-02
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
+Author: person("Hillary", "Heiling", email = "hheiling@live.unc.edu", role = c("aut", "cre"))
+Maintainer: Hillary Heiling <hheiling@live.unc.edu>
 Description: More about what it does (maybe more than one line)
-License: What license is it under?
-Imports: Rcpp (>= 1.0.1), isoform
+License: GPL (>= 2)
+Encoding: UTF-8
+Imports: Rcpp (>= 1.0.1), isoform, cummeRbund
 LinkingTo: Rcpp, RcppArmadillo
+RoxygenNote: 6.1.0.9000
