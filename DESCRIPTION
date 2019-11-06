@@ -10,4 +10,4 @@ License: GPL (>= 2)
 Encoding: UTF-8
 Imports: Rcpp (>= 1.0.1), isoform, cummeRbund
 LinkingTo: Rcpp, RcppArmadillo
-RoxygenNote: 6.1.0.9000
+RoxygenNote: 6.1.1
