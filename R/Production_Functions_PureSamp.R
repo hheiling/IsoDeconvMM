@@ -288,8 +288,8 @@ update.pure.alpha.beta.sing<-function(p.data,X.fin,X.prime,l_tilde,I,Xorig){
   if(ncol(rds.k) > 1){
     tau.hat = colSums(rds.k[-1,])/colSums(rds.k)
   }else{
-    warn_msg = sprintf("Number of reference pure samples for cell type %s is 1 \n IsoDeconvMM suggests using 2 or more reference samples per cell type \n", p.data$cellType)
-    warning(warn_msg, immediate. = T)
+    # warn_msg = sprintf("Number of reference pure samples for cell type %s is 1 \n IsoDeconvMM suggests using 2 or more reference samples per cell type \n", p.data$cellType)
+    # warning(warn_msg, immediate. = T)
     tau.hat = sum(rds.k[-1,])/sum(rds.k)
   }
   
