@@ -290,7 +290,7 @@ update.pure.alpha.beta.sing<-function(p.data,X.fin,X.prime,l_tilde,I,Xorig){
   }else{
     warn_msg = sprintf("Number of reference pure samples for cell type %s is 1 \n IsoDeconvMM suggests using 2 or more reference samples per cell type \n", p.data$cellType)
     warning(warn_msg, immediate. = T)
-    tau.had = sum(rds.k[-1,])/sum(rds.k)
+    tau.hat = sum(rds.k[-1,])/sum(rds.k)
   }
   
   
