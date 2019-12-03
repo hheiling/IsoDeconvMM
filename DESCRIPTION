@@ -8,6 +8,6 @@ Maintainer: Hillary Heiling <hheiling@live.unc.edu>
 Description: More about what it does (maybe more than one line)
 License: GPL (>= 2)
 Encoding: UTF-8
-Imports: Rcpp (>= 1.0.1), isoform, cummeRbund
+Imports: Rcpp (>= 1.0.1), isoform
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 6.1.1
