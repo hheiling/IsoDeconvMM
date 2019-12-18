@@ -167,6 +167,21 @@ names(concat_geneMod) = tnames_discrim
 #         - count : contains the number of reads at the exon set in question for "sample_name"                                              #
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 
+#-------------------------------------------------------------------------------------------------------------------------------------------#
+# GENERATING PDDIST:                                                                                                                        #
+#-------------------------------------------------------------------------------------------------------------------------------------------#
+# Generates an estimate of the distribution of fragment lengths necessary for the computation of effective length.
+
+pdDist_gen <- function(fragSizeFile,lmax){
+  
+  md = fragSizeFile
+  
+  pd = rep(0, lmax)
+  w2 = which(md$Len <= lmax)
+  pd[md$Len[w2]] = md$Freq[w2]
+  pdDist = pd/sum(pd)
+  return(pdDist)
+}
 
 pdDist = pdDist_gen(fragSizeFile,lmax)
 
