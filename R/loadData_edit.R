@@ -9,11 +9,12 @@
 #' @importFrom isoform loadData
 #' @export
 loadData_djEdit <- function (countFile, bedFile, readLen, lmax = 500) {
-  dat = read.table(countFile, as.is = TRUE)
-  colNames = c("count", "exons")
-  cN = sprintf("%s and %s", colNames[1], colNames[2])
+  
+  dat = countFile
   
   if (ncol(dat) != 2) {
+    colNames = c("count", "exons")
+    cN = sprintf("%s and %s", colNames[1], colNames[2])
     stop(countFile, " should have 2 columns: ", cN, "\n")
   }
   
@@ -151,5 +152,7 @@ loadData_djEdit <- function (countFile, bedFile, readLen, lmax = 500) {
                           stringsAsFactors = FALSE)
     geneMod[[uId]] = list(info = exonInfo, count = gene1)
   }
+  
   geneMod
+  
 }
