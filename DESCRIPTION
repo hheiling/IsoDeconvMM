@@ -1,13 +1,13 @@
 Package: IsoDeconvMM
 Type: Package
 Title: What the package does (short line)
-Version: 0.0.1
+Version: 0.0.2
 Date: 2019-09-02
 Author: person("Hillary", "Heiling", email = "hheiling@live.unc.edu", role = c("aut", "cre"))
 Maintainer: Hillary Heiling <hheiling@live.unc.edu>
 Description: More about what it does (maybe more than one line)
 License: GPL (>= 2)
 Encoding: UTF-8
-Imports: Rcpp (>= 1.0.1), isoform
+Imports: Rcpp (>= 1.0.1), isoform, alabama, gtools, ICSNP, stringr
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 6.1.1
