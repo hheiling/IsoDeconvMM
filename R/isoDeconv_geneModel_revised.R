@@ -19,7 +19,8 @@
 # SETTING VARIABLES                                                                                                                  #
 #------------------------------------------------------------------------------------------------------------------------------------#
 #  - countData:
-#       Vector of file names of the summarized count files (.txt files). Read counts summarized by exon set.
+#       Changed to: list of data.frames passed from wrapper function. Otherwise, general description details below accurate
+#       [[Vector of file names of the summarized count files (.txt files). Read counts summarized by exon set.]]
 #  - labels:
 #       Vector of labels which will be used to name the read counts within clusters. 
 #  - cellTypes:
@@ -44,7 +45,7 @@
 #       defined by the mixture samples to reduce modeling complexity.
 
 #' @export
-dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,knownIsoforms,fragSizeFile,readLen,lmax,eLenMin){
+dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,knownIsoforms,fragSizeFile,readLen,lmax,eLenMin,discrim_clusters){
   
 #------------------------------------------------------------------------------------------------------------------------------------#
 # LOADING THE DATA                                                                                                                   #
@@ -54,7 +55,7 @@ dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,kn
 # present in the countData vector.
 
 for(i in 1:length(countData)){
-  ct_datai = countData[i]
+  ct_datai = countData[[i]]
   outFile = labels[i]
   cmdi = sprintf("%s = loadData_djEdit(ct_datai,bedFile,readLen,lmax)",outFile)
   eval(parse(text=cmdi))
@@ -98,6 +99,8 @@ for(i in 1:length(sam_names)){
 
 tnames = tnames[order(tnames)]
 
+tnames_discrim = tnames[which(tnames %in% discrim_clusters)]
+
 # Create a list of length length(tnames) wherein the i-th element of the list is a list composed of #samples+1 datasets and a row vector.
 # The vector is info_status and confirms whether or not the info dataset is complete and accurate.
 # The first dataset is $info, which contains information on all exons in the cluster. The subsequent datasets are the counts at each
@@ -105,14 +108,14 @@ tnames = tnames[order(tnames)]
 
 concat_geneMod = list()
 
-for(i in 1:length(tnames)){
+for(i in 1:length(tnames_discrim)){
   concat_geneMod[[i]] = list(info_status="Not Checked",info=NULL)
   incurr_clust = rep(0,length(sam_names))
   z = rep(TRUE,length(sam_names)-1)
   for(j in 1:length(sam_names)){
     tclust_currsamp = names(concat_list[[j]])
-    if(tnames[i] %in% tclust_currsamp){
-      cmdij = sprintf("concat_geneMod[[i]]$%s = concat_list[[j]][[tnames[i]]]$count",sam_names[j])
+    if(tnames_discrim[i] %in% tclust_currsamp){
+      cmdij = sprintf("concat_geneMod[[i]]$%s = concat_list[[j]][[tnames_discrim[i]]]$count",sam_names[j])
       eval(parse(text=cmdij))
       incurr_clust[j] = 1
     } else {
@@ -123,13 +126,13 @@ for(i in 1:length(tnames)){
   }
   sam_clust = which(incurr_clust==1)
   fsamp = sam_clust[1]
-  concat_geneMod[[i]]$info = concat_list[[fsamp]][[tnames[i]]]$info
+  concat_geneMod[[i]]$info = concat_list[[fsamp]][[tnames_discrim[i]]]$info
   for(k in 1:length(sam_clust)){
     fsamp_k = sam_clust[k]
     dim_orig = dim(concat_geneMod[[i]]$info)
-    dim_final = dim(concat_list[[fsamp_k]][[tnames[i]]]$info)
+    dim_final = dim(concat_list[[fsamp_k]][[tnames_discrim[i]]]$info)
     if(all(dim_orig == dim_final)){
-      z[k-1] = all(concat_geneMod[[i]]$info==concat_list[[fsamp_k]][[tnames[i]]]$info)
+      z[k-1] = all(concat_geneMod[[i]]$info==concat_list[[fsamp_k]][[tnames_discrim[i]]]$info)
     } else {
       z[k-1] = FALSE
     }
@@ -141,7 +144,7 @@ for(i in 1:length(tnames)){
   }
 }
 
-names(concat_geneMod) = tnames
+names(concat_geneMod) = tnames_discrim
 
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 # CONCAT_GENEMOD:                                                                                                                           #
@@ -164,38 +167,11 @@ names(concat_geneMod) = tnames
 #         - count : contains the number of reads at the exon set in question for "sample_name"                                              #
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 
-#-------------------------------------------------------------------------------------------------------------------------------------------#
-# GENERATING PDDIST:                                                                                                                        #
-#-------------------------------------------------------------------------------------------------------------------------------------------#
-# Generates an estimate of the distribution of fragment lengths necessary for the computation of effective length.
-
-pdDist_gen <- function(fragSizeFile,lmax){
-  md = read.table(fragSizeFile)
-  if (ncol(md) != 2) {
-    stop(fragSizeFile, " should have 2 columns for Freq and Len\n")
-  }
-  names(md) = c("Freq", "Len")
-  pd = rep(0, lmax)
-  w2 = which(md$Len <= lmax)
-  pd[md$Len[w2]] = md$Freq[w2]
-  pdDist = pd/sum(pd)
-  return(pdDist)
-}
 
 pdDist = pdDist_gen(fragSizeFile,lmax)
 
-#-------------------------------------------------------------------------------------------------------------------------------------------#
-# CHECKING Presence of Isoforms File:                                                                                                       #
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-# IsoDeconv requires a list of known isoforms in order to model intra-sample heterogeneity. Stops program if file not present.              #
-#-------------------------------------------------------------------------------------------------------------------------------------------#
 
-if(!is.null(knownIsoforms)){
-  load(knownIsoforms)
-}
-else {
-  stop("Isoforms file Must be present!")
-}
+isoAll = knownIsoforms
 
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 # CALL TO GENEMODEL:                                                                                                                        #
@@ -214,9 +190,8 @@ for (i in 1:length(nms)) {
   }
   nm1 = nms[i]
   ge1 = concat_geneMod[[nm1]]
-  if (!is.null(knownIsoforms)) {
-    isoforms = isoAll[[nm1]]
-  } 
+  isoforms = isoAll[[nm1]]
+   
   # Call to geneModel function: ge1 is a list with components $count and $info for a single transcript
   # cluster. isoforms is a matrix which details all of the isoforms used in a transcript cluster with
   # indicators for whether a particular exon is used by an isoform.
@@ -228,8 +203,9 @@ for (i in 1:length(nms)) {
 
 cellType_count = sum(unique(tolower(cellTypes))!="mix")
 info_mat = data.frame(Label = labels, Cell_Type = tolower(cellTypes), Total = total_cts,stringsAsFactors = FALSE)
-fin_geneMod["Sample_Info"] = list(info = info_mat,tclust_tot=length(fin_geneMod),
-                                      cellType_count=cellType_count)
+# fin_geneMod["Sample_Info"] = list(info = info_mat,tclust_tot=length(fin_geneMod),
+#                                       cellType_count=cellType_count)
+fin_geneMod["Sample_Info"] = info_mat
 
 
 # save(fin_geneMod, file = output) # Removed output from function arguments
