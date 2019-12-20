@@ -34,22 +34,24 @@
 #' @return A list object with the following elements (...)
 #'  
 #' @importFrom stringr str_c str_remove
+#' @imortFrom MASS glm.nb
 #' @export
 isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_files,
                        bedfile, knownIsoforms, discrim_genes, 
                        readLen, lmax = 600, eLenMin = 1, mix_names = NULL,
-                       initPts = NULL){
+                       initPts = NULL, sim = simControl()){
   
   # Convert given arguments to alternative formats
   
   countData_mix = mix_files
   countData_pure = c(pure_ref_files[,1])
   cellTypes_pure = as.factor(c(pure_ref_files[,2]))
-  cellTypes_pure_names = levels(cellTypes_pure)
+  # ctpure_names = pure cellTypes names
+  ctpure_names = levels(cellTypes_pure)
   
   labels_pure = character(length(countData_pure))
   
-  for(type in levels(cellTypes_pure)){
+  for(type in ctpure_names){
     locations = which(cellTypes == type)
     labels_type = cellTypes[locations]
     num_ref = length(labels_type)
@@ -57,10 +59,12 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     labels_pure[locations] = labels_ref
   }
   
-  ## See comp_total_cts function after isodecov function
+  ## See comp_total_cts() function under "Internal isoDeconvMM Functions" heading later in this document
   pure_input = comp_total_cts(directory = directory, countData = countData_pure)
   
   mix_input = comp_total_cts(directory = directory, countData = countData_mix)
+  
+  print("Finished pure and mixed comp_total_cts()")
   
   fraglens_list = list()
   for(i in 1:length(fraglens_files)){
@@ -78,6 +82,8 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     
     fraglens_list[[i]] = fraglens
   }
+  
+  print("Finished loading fraglens files")
   
   files = list()
   
@@ -100,12 +106,12 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
   }
   
   if(is.null(initPts)){
-    initPts = matrix(1/length(cellTypes_pure_names), nrow = 1, ncol = length(cellTypes_pure_names))
+    initPts = matrix(1/length(ctpure_names), nrow = 1, ncol = length(ctpure_names))
   }else if(class(initPts = "matrix")){
-    if(ncol(initPts) != length(cellTypes_pure_names)){
+    if(ncol(initPts) != length(ctpure_names)){
       stop("number of columns of initPts must be equal to the number of pure reference cell types")
     }
-    if(!(colnames(initPts) %in% cellTypes_pure_names)){
+    if(!(colnames(initPts) %in% ctpure_names)){
       stop("colnames of initPts must match pure cell type names in pure_ref_files; see documentation for more details")
     }
     if(sum(initPts > 1) > 0 | sum(initPts < 0) > 0 | (nrow(initPts) > 1 & sum(rowSums(initPts) > 1) > 0)){
@@ -115,8 +121,8 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     stop("initPts must be a matrix, see documentation for details")
   }
   
-  # Re-arrange column order of initPts matrix to match order of cellTypes_pure_names
-  initPts = initPts[,cellTypes_pure_names]
+  # Re-arrange column order of initPts matrix to match order of ctpure_names
+  initPts = initPts[,ctpure_names]
   
   #-------------------------------------------------------------------------------------------------------------------------------------------#
   # CHECKING Presence of Isoforms File:                                                                                                       #
@@ -133,6 +139,8 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
   # Load knownIsoforms .RData object:
   
   assign("isoAll", get(load(knownIsoforms)))
+  
+  cat("knownIsoforms loaded as isoAll, class(isoAll) = " class(isoAll), "\n")
   
   # Alternative methods of loading knownIsoforms .RData object:
   
@@ -199,6 +207,8 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     final_geneMod[[j]] = fin_geneMod
   }
   
+  print("Finished Step 1")
+  
   # Step 2: Moved to before Step 1 
   
   # Step 3
@@ -245,6 +255,8 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     significant_geneMod[[j]] = sig_geneMod
   }
   
+  print("Finished Step 3")
+  
   # Step 4
   
   #-------------------------------------------------------------------#
@@ -252,6 +264,227 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
   #-------------------------------------------------------------------#
   
   ## Add rds_exons object to each cluster list object
+  
+  ## See mod_sig_gM() function under "Internal isoDeconvMM Functions" heading later in this document
+  modified_sig_geneMod = mod_sig_gM(significant_geneMod = significant_geneMod)
+  
+  print("Finished Step 4")
+  
+  # Step 5
+  
+  #-----------------------------------------------------------#
+  # Pure Cell Type Parameter Estimation                       #
+  #-----------------------------------------------------------#
+  
+  ## See pure_estimation() function under "Internal isoDeconvMM Functions" heading later in this document
+  pure_est = pure_estimation(modified_sig_geneMod = modified_sig_geneMod, cellTypes = ctpure_names)
+  
+  print("Finished Step 5")
+  
+  #-------------------------------------------------------------------#
+  # Simulation                                                        #
+  #-------------------------------------------------------------------#
+  
+  # For testing purposes only:
+  # If only have one reference sample for each pure cell type, simulate additional sample counts
+  # Use pure cell type parameter estimates from "Step 5" to simulate additional counts
+  
+  if(simControl$sim == TRUE){
+    
+    tmp.data = pure_est[[1]]
+    
+    sim_num = simControl$sim_num
+    
+    sim_data = list()
+    
+    if(!is.null(simControl$seed)){
+      set.seed(simControl$seed)
+    }
+    
+    clusters = names(tmp.data)
+    
+    # Simulate additional pure cell type reference sample counts
+    
+    for(clust in clusters){
+      
+      clust_data = tmp.data[[clust]]
+      alpha = clust_data$alpha.est
+      
+      for(i in 1:length(ctpure_names)){
+        
+        ct_name = ctpure_names[i]
+        y_label = sprintf("y_%s", labels_pure[i])
+        y = clust_data[[y_label]]
+        X = clust_data$X
+        X_a = X %*% alpha[,i]
+        
+        fit = glm.nb(y ~ X_a - 1, link = log)
+        theta = fit$theta
+        if(theta > 1){
+          cat("clust: ", clust, "\n")
+          cat("i: ", i, "\n")
+          cat("theta: ", theta, "\n")
+          theta = runif(1, 0.1, 0.3)
+          cat("new theta: ", theta, "\n")
+        }
+        nb_means = exp(cbind(X_a) %*% fit$coefficients)
+        nb_means = ifelse(nb_means > (5*max(y)), max(y), nb_means)
+        y_sim = matrix(0, nrow = nrow(X), ncol = sim_num)
+        
+        for(j in 1:ncol(y_sim)){
+          y_sim[,j] = rnegbin(n = nrow(X), mu = nb_means, theta = theta)
+        }
+        
+        y_cols = str_c(sprintf("y_%s", ct_name), "_ref",2:(sim_num+1))
+        colnames(y_sim) = y_cols
+        
+        sim_data[[clust]][[ct_name]] = list(y_sim = y_sim, seed = seed, mu = nb_means, theta = theta)
+        
+        # if(anyNA(y_sim)){
+        #   cat("clust: ", clust, "\n")
+        #   cat("i: ", i, "\n")
+        #   cat("at least one NA in y_sim \n")
+        # }
+        
+      }
+    }
+    
+    # Using simulated counts, integrate with original Step 4 modified_sig_geneMod list object
+    
+    sig_geneMod = modified_sig_geneMod[[1]]
+    
+    step4_sim_data = list()
+    
+    for(clust in clusters){
+      clust_data = sig_geneMod[[clust]]
+      sim_result = sim_data[[clust]]
+      
+      step4_sim_data[[clust]] = clust_data
+      
+      for(i in 1:length(ctpure_names)){
+        ct_name = ctpure_names[i]
+        label_suffix = labels_pure[i]
+        y = clust_data[[y_label]]
+        y_sim = sim_result[[ct_name]]$y_sim
+        y_cols = colnames(y_sim)
+        for(j in 1:ncol(y_sim)){
+          y_k = y_sim[,j]
+          exons = clust_data[[sprintf("countN_%s", label_suffix)]][,1]
+          step4_sim_data[[clust]][[y_cols[j]]] = y_k
+          step4_sim_data[[clust]][[sprintf("countN_%s", str_remove(y_cols[j], "y_"))]] = data.frame(exons = exons, count = y_k)
+          step4_sim_data[[clust]][[ct_name]][["rds_exons"]] = 
+            cbind(step4_sim_data[[clust]][[ct_name]][["rds_exons"]], c(total_cts[i+1] - sum(y_k), y_k))
+        }
+      }
+    }
+    
+    print("Finished Simulation")
+    
+    # Once the step4_sim_data list is complete, re-run Step 5
+    
+    pure_est = pure_estimation(modified_sig_geneMod = step4_sim_data, cellTypes = ctpure_names)
+    
+    print("Finished redo of Step 5 with simulated data")
+    
+  }
+  
+  # Step 6
+  
+  IsoDeconv_Output = list()
+  
+  for(i in 1:length(pure_est)){
+    
+    tmp.data = pure_est[[i]]
+    
+    #--------------------------------------------------------#
+    # Establish input break ups                              #
+    #--------------------------------------------------------#
+    
+    # Data Set Necessities:
+    clust.start = 1
+    clust.end = length(tmp.data)
+    by.value = 15
+    
+    start.pts = seq(from = 1,to = clust.end,by = by.value)
+    end.pts = c((start.pts[-1]-1),clust.end)
+    
+    cluster_output = list()
+    for(m in 1:length(start.pts)){
+      start.pt = start.pts[m]
+      end.pt = end.pts[m]
+      
+      curr.clust.opt = tmp.data[c(start.pt:end.pt)]
+      ## See R/Production_Functions_MixedSamp.R for STG.Updat_Cluster.All() code
+      curr.clust.out = STG.Update_Cluster.All(all_data=curr.clust.opt, cellTypes = ctpure_names,
+                                              optimType="nlminb", simple.Init=FALSE, initPts=c(0.5))
+      
+      cluster_output[[m]] = curr.clust.out
+    }
+    
+    IsoDeconv_Output[[i]] = cluster_output
+  }
+  
+  print("Finished Step 6")
+  
+  # Step 7
+  
+  #-----------------------------------------------------------------------#
+  # Compile Files                                                         #
+  #-----------------------------------------------------------------------#
+  
+  Final_Compiled_Output = list()
+  
+  for(j in 1:length(IsoDeconv_Output)){
+    
+    comp.out= NULL
+    curr.clust.out = NULL
+    
+    #---- Set up new pattern ----#
+    est.chunks = IsoDeconv_Output[[j]]
+    
+    message("File ", j)
+    
+    #---- Populate Output Dataset ----#
+    comp.out = list()
+    r = 1
+    
+    for(i in 1:length(est.chunks)){
+      curr.clust.out = est.chunks[[i]]
+      nl = length(curr.clust.out)
+      for(m in 1:nl){
+        comp.out[[r]]=curr.clust.out[[m]]
+        r = r+1
+      }
+    }
+    
+    Final_Compiled_Output[[j]] = comp.out 
+    
+  }
+  
+  if(is.null(mix_names)){
+    names(Final_Compiled_Output) = str_remove(mix_files, ".txt")
+  }else{
+    names(Final_Compiled_Output) = mix_names
+  }
+  
+  print("Finished Step 7")
+  
+  return(Final_Compiled_Output)
+  
+  
+} # End isoDeconvMM() function
+
+
+
+#-------------------------------------------------------------------#
+# Internal isoDeconvMM functions                                    #
+#-------------------------------------------------------------------#
+
+# Step 4
+
+## Add rds_exons object to each cluster list object
+
+mod_sig_gM = function(significant_geneMod){
   
   modified_sig_geneMod = list()
   
@@ -297,11 +530,17 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     
   }
   
-  # Step 5
+  return(modified_sig_geneMod)
   
-  #-----------------------------------------------------------#
-  # CALL Pure Sample                                          #
-  #-----------------------------------------------------------#
+} # End mod_sig_gM() function
+
+# Step 5
+
+#-----------------------------------------------------------#
+# Pure Cell Type Parameter Estimation                       #
+#-----------------------------------------------------------#
+
+pure_estimation = function(modified_sig_geneMod, cellTypes){
   
   pure_est = list()
   
@@ -341,7 +580,7 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
       
       # Optimize the Pure Sample Functions:
       ## See R/Production_Functions_PureSamp.R for Pure.apply.fun() code
-      tmp.data = Pure.apply.fun(data.list = sim.new, cellTypes = cellTypes_pure, corr_co = 1)
+      tmp.data = Pure.apply.fun(data.list = sim.new, cellTypes = ctpure_names, corr_co = 1)
       
       pure_est[[j]] = tmp.data
       
@@ -357,7 +596,7 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
         tmp_j[[clust]][["E"]] = tmp.data[[clust]][["E"]]
         tmp_j[[clust]][["alpha.est"]] = tmp.data[[clust]][["alpha.est"]]
         tmp_j[[clust]][["beta.est"]] = tmp.data[[clust]][["beta.est"]]
-        for(ct in cellTypes_pure_names){
+        for(ct in ctpure_names){
           tmp_j[[clust]][[ct]][["tau.hat"]] = tmp.data[[clust]][[ct]][["tau.hat"]]
           tmp_j[[clust]][[ct]][["gamma.hat"]] = tmp.data[[clust]][[ct]][["tau.hat"]]
         }
@@ -370,90 +609,10 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     
   }
   
-  # Step 6
+  return(pure_est)
   
-  IsoDeconv_Output = list()
-  
-  for(i in 1:length(pure_est)){
-    
-    tmp.data = pure_est[[i]]
-    
-    #--------------------------------------------------------#
-    # Establish input break ups                              #
-    #--------------------------------------------------------#
-    
-    # Data Set Necessities:
-    clust.start = 1
-    clust.end = length(tmp.data)
-    by.value = 15
-    
-    start.pts = seq(from = 1,to = clust.end,by = by.value)
-    end.pts = c((start.pts[-1]-1),clust.end)
-    
-    cluster_output = list()
-    for(m in 1:length(start.pts)){
-      start.pt = start.pts[m]
-      end.pt = end.pts[m]
-      
-      curr.clust.opt = tmp.data[c(start.pt:end.pt)]
-      ## See R/Production_Functions_MixedSamp.R for STG.Updat_Cluster.All() code
-      curr.clust.out = STG.Update_Cluster.All(all_data=curr.clust.opt, cellTypes = cellTypes_pure,
-                                              optimType="nlminb", simple.Init=FALSE, initPts=c(0.5))
-      
-      cluster_output[[m]] = curr.clust.out
-    }
-    
-    IsoDeconv_Output[[i]] = cluster_output
-  }
-  
-  # Step 7
-  
-  #-----------------------------------------------------------------------#
-  # Compile Files                                                         #
-  #-----------------------------------------------------------------------#
-  
-  Final_Compiled_Output = list()
-  
-  for(j in 1:length(IsoDeconv_Output)){
-    
-    comp.out= NULL
-    curr.clust.out = NULL
-    
-    #---- Set up new pattern ----#
-    est.chunks = IsoDeconv_Output[[j]]
-    
-    message("File ", j)
-    
-    #---- Populate Output Dataset ----#
-    comp.out = list()
-    r = 1
-    
-    for(i in 1:length(est.chunks)){
-      curr.clust.out = est.chunks[[i]]
-      nl = length(curr.clust.out)
-      for(m in 1:nl){
-        comp.out[[r]]=curr.clust.out[[m]]
-        r = r+1
-      }
-    }
-    
-    Final_Compiled_Output[[j]] = comp.out 
-    
-  }
-  
-  if(is.null(mix_names)){
-    names(Final_Compiled_Output) = str_remove(mix_files, ".txt")
-  }else{
-    names(Final_Compiled_Output) = mix_names
-  }
-  
-  
-  return(Final_Compiled_Output)
-  
-  
-}
+} # End pure_estimation() function
 
-# Helper functions
 
 comp_total_cts = function(directory, countData){
   
@@ -474,4 +633,10 @@ comp_total_cts = function(directory, countData){
   }
   
   return(list(total_cts = total_cts, counts_list = counts_list))
+} # End comp_total_cts() function
+
+#' @export
+simControl = function(sim = FALSE, sim_num = 4, seed = NULL){
+  structure(list(sim_num = sim_num, seed = seed), 
+            class = c("simControl"))
 }
