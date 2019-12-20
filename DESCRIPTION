@@ -3,7 +3,7 @@ Type: Package
 Title: Performs Cell Type Deconvolution using Differential Isoform Information
 Version: 0.0.2
 Date: 2019-09-02
-Author: person("Hillary", "Heiling", email = "hheiling@live.unc.edu", role = c("aut", "cre"))
+Authors@R: person("Hillary", "Heiling", email = "hheiling@live.unc.edu", role = c("aut", "cre"))
 Maintainer: Hillary Heiling <hheiling@live.unc.edu>
 Description: Performs Cell Type Deconvolution using Differential Isoform Information. Edit with more details. More about what it does (maybe more than one line). 
 License: GPL (>= 2)
@@ -12,4 +12,3 @@ Imports: Rcpp (>= 1.0.1), isoform, alabama, gtools, ICSNP, stringr
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 6.1.1
 NeedsCompilation: yes
-Author: Hillary Heiling [aut, cre]
