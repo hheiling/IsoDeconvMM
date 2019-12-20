@@ -434,6 +434,8 @@ Pure.update.cycle<-function(z,cellTypes,corr_co){
   return(z)
 }
 
+#' @importFrom alabama auglag
+#' @import gtools
 #' @export
 Pure.apply.fun<-function(data.list,cellTypes,corr_co){
   out.fin = lapply(X = data.list,FUN = Pure.update.cycle,cellTypes=cellTypes,corr_co=corr_co)
