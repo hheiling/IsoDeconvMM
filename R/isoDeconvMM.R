@@ -140,7 +140,7 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
   
   assign("isoAll", get(load(knownIsoforms)))
   
-  cat("knownIsoforms loaded as isoAll, class(isoAll) = " class(isoAll), "\n")
+  cat("knownIsoforms loaded as isoAll, class(isoAll) = ", class(isoAll), "\n")
   
   # Alternative methods of loading knownIsoforms .RData object:
   
