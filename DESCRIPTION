@@ -11,3 +11,5 @@ Encoding: UTF-8
 Imports: Rcpp (>= 1.0.1), isoform, alabama, gtools, ICSNP, stringr
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 6.1.1
+NeedsCompilation: yes
+Author: Hillary Heiling [aut, cre]
