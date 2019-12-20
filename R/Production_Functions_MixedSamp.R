@@ -340,14 +340,22 @@ applyMI<-function(x,cdata,cellTypes,p.co,t.co,g.co,optimType,iter.cut){
 
 STG.Update_Cluster.SingMI<-function(cdata,cellTypes,p.co,t.co,g.co,optimType,iter.co,simple.Init,initPts){
   # Set up the test.init values:
-  if(length(cellTypes)>2){
-    stop("IsoDeconv is not yet ready for such data!")
+  # if(length(cellTypes)>2){
+  #   stop("IsoDeconv is not yet ready for such data!")
+  # }
+  
+  # test.init      = matrix(0,nrow=length(initPts),ncol=2)
+  # #test.init[,1] = c(0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.99)
+  # test.init[,1]  = initPts
+  # test.init[,2]  = 1-test.init[,1]
+  if(ncol(initPts) == 1){
+    test.init = cbind(initPts, 0)
+    test.init[,2] = 1 - test.init[,1]
+  }else if(ncol(initPts) > 1){
+    test.init = cbind(initPts, 0)
+    test.init[,(ncol(initPts)+1)] = 1 - rowSums(initPts)
   }
   
-  test.init      = matrix(0,nrow=length(initPts),ncol=2)
-  #test.init[,1] = c(0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.99)
-  test.init[,1]  = initPts
-  test.init[,2]  = 1-test.init[,1]
   
   if(simple.Init==TRUE){
     message("Applying First Round!")
@@ -697,6 +705,7 @@ STG.Update_Cluster.Single<-function(cdata,cellTypes,p.co,t.co,g.co,optimType,tes
 # 4 - Error in Optimization Routine
 # 5 - Optimization not conducted (Error in pure sample fit)
 
+#' @importFrom alabama auglag
 #' @export
 STG.Update_Cluster.All<-function(all_data,cellTypes,optimType="nlminb",simple.Init,initPts){
   tmp.out = lapply(X = all_data,FUN = STG.Update_Cluster.SingMI,cellTypes= cellTypes,
@@ -705,71 +714,6 @@ STG.Update_Cluster.All<-function(all_data,cellTypes,optimType="nlminb",simple.In
   return(tmp.out)
 }
 
-#-----------------------------------------------------------------------#
-# SUMMARIZING the Output                                                #
-#-----------------------------------------------------------------------#
-# Compile the estimates from each cluster, provide a histogram, 
-# and summarize the values with a geometric median.
-
-histogram_func<-function(vec){
-  mtitle = sprintf("Distribution of Estimated Proportions of (%s)",vec[1])
-  xlabel= sprintf("Prop. of (%s)",vec[1])
-  hist(x = as.numeric(vec[-1]),main = mtitle,xlab = xlabel)
-}
-
-Summarize_Report<-function(cdata,restrict,clusters=NULL){
-  #--------------------------------------------------------------#
-  # CODING for restrictions                                      #
-  #--------------------------------------------------------------#
-  if(length(clusters)>0){
-    if(restrict==0 && length(clusters)>0){
-      warn("Set Restrict to no, but specified clusters for restriction.\n")
-      warn("Will restrict to provided clusters.\n")
-    }
-    cdata_fin = cdata[clusters]
-  } else {
-    cdata_fin = cdata
-  }
-  
-  #--------------------------------------------------------------#
-  # EXTRACT cell-types info                                      #
-  #--------------------------------------------------------------#
-  cto = cdata_fin[[1]][["CellType_Order"]]
-  nclust = length(cdata_fin)
-  
-  p_mat = matrix(0,nrow = nclust,ncol = length(cto))
-  colnames(p_mat) = cto
-  
-  for(i in 1:nclust){
-    p_mat[i,] = cdata_fin[[i]][["mix"]][["p.est"]]
-  }
-  
-  #--------------------------------------------------------------#
-  # PLOTTING the cell type info                                  #
-  #--------------------------------------------------------------#
-  df = as.data.frame(x = t(p_mat))
-    names_vec = paste("clust",1:nclust,"est",sep = ".")
-    colnames(df) = names_vec
-    df$cellType = cto
-    df = df[c("cellType",names_vec)]
-  
-  apply(X = df,MARGIN = 1,FUN = histogram_func)
-  
-  #---------------------------------------------------------------#
-  # Summarizing the Values                                        #
-  #---------------------------------------------------------------#
-  fin_est = matrix(0,nrow=1,ncol=length(cto))
-  colnames(fin_est) = cto
-  
-  p.fin = spatial.median(X = p_mat[,-length(cto)])
-  
-  fin_est[1,] = c(p.fin,1-sum(p.fin))
-  
-  #----------------------------------------------------------------#
-  # RETURN values                                                  #
-  #----------------------------------------------------------------#
-  return(list(p.est = fin_est,p.mat = p_mat))
-}
 
 #-------------------------------------------------------------------#
 # PROGRAM LIST                                                      #
