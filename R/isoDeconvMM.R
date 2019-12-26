@@ -52,8 +52,8 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
   labels_pure = character(length(countData_pure))
   
   for(type in ctpure_names){
-    locations = which(cellTypes == type)
-    labels_type = cellTypes[locations]
+    locations = which(cellTypes_pure == type)
+    labels_type = cellTypes_pure[locations]
     num_ref = length(labels_type)
     labels_ref = str_c(labels_type, "_ref", 1:num_ref)
     labels_pure[locations] = labels_ref
