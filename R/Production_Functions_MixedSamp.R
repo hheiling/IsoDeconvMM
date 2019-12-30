@@ -339,22 +339,9 @@ applyMI<-function(x,cdata,cellTypes,p.co,t.co,g.co,optimType,iter.cut){
 }
 
 STG.Update_Cluster.SingMI<-function(cdata,cellTypes,p.co,t.co,g.co,optimType,iter.co,simple.Init,initPts){
-  # Set up the test.init values:
-  # if(length(cellTypes)>2){
-  #   stop("IsoDeconv is not yet ready for such data!")
-  # }
   
-  # test.init      = matrix(0,nrow=length(initPts),ncol=2)
-  # #test.init[,1] = c(0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.99)
-  # test.init[,1]  = initPts
-  # test.init[,2]  = 1-test.init[,1]
-  if(ncol(initPts) == 1){
-    test.init = cbind(initPts, 0)
-    test.init[,2] = 1 - test.init[,1]
-  }else if(ncol(initPts) > 1){
-    test.init = cbind(initPts, 0)
-    test.init[,(ncol(initPts)+1)] = 1 - rowSums(initPts)
-  }
+  # initPts values set up in isoDeconvMM() function
+  test.init = initPts
   
   
   if(simple.Init==TRUE){
