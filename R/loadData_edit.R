@@ -11,16 +11,16 @@
 loadData_djEdit <- function (countFile, bedFile, readLen, lmax = 500) {
   
   dat = countFile
-  
-  if (ncol(dat) != 2) {
-    colNames = c("count", "exons")
-    cN = sprintf("%s and %s", colNames[1], colNames[2])
-    stop(countFile, " should have 2 columns: ", cN, "\n")
-  }
-  
-  names(dat) = colNames
-  dim(dat)
-  dat[1:2, ]
+  # colNames = c("count", "exons") # column names of dat
+  # 
+  # if (ncol(dat) != 2) {
+  #   cN = sprintf("%s and %s", colNames[1], colNames[2])
+  #   stop(countFile, " should have 2 columns: ", cN, "\n")
+  # }
+  # 
+  # names(dat) = colNames
+  # dim(dat)
+  # dat[1:2, ]
   
   groupIDs = strsplit(dat$exons, split = ";", fixed = TRUE)
   
@@ -91,16 +91,18 @@ loadData_djEdit <- function (countFile, bedFile, readLen, lmax = 500) {
   
   dim(dat)  
   
-  info = read.table(bedFile, sep = "\t", as.is = TRUE)
-  colNames = c("chr", "start", "end", "exon", "score", "strand")
-  cN = paste(colNames, collapse = ", ")
+  # info = read.table(bedFile, sep = "\t", as.is = TRUE)
+  # colNames = c("chr", "start", "end", "exon", "score", "strand")
+  # cN = paste(colNames, collapse = ", ")
+  # 
+  # if (ncol(info) != 6) {
+  #   stop(bedFile, " should have 6 columns: ", cN, "\n")
+  # }
+  # names(info) = colNames
+  # dim(info)
+  # info[1:2, ]
   
-  if (ncol(info) != 6) {
-    stop(bedFile, " should have 6 columns: ", cN, "\n")
-  }
-  names(info) = colNames
-  dim(info)
-  info[1:2, ]
+  info = bedFile
   
   infoIDs = strsplit(info$exon, split = "|", fixed = TRUE)
   if (any(sapply(infoIDs, length) != 3)) {
