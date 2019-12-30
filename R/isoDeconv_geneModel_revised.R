@@ -45,7 +45,7 @@
 #       defined by the mixture samples to reduce modeling complexity.
 
 #' @export
-dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,knownIsoforms,fragSizeFile,readLen,lmax,eLenMin,discrim_clusters){
+dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,knownIsoforms,fragSizeFile,readLen,lmax,eLenMin){
   
 #------------------------------------------------------------------------------------------------------------------------------------#
 # LOADING THE DATA                                                                                                                   #
@@ -54,6 +54,7 @@ dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,kn
 # Calls to Dr. Sun's loadData function and generates one GeneModel for each sample
 # present in the countData vector.
 
+  print("Loading the Data")
 for(i in 1:length(countData)){
   ct_datai = countData[[i]]
   outFile = labels[i]
@@ -99,7 +100,7 @@ for(i in 1:length(sam_names)){
 
 tnames = tnames[order(tnames)]
 
-tnames_discrim = tnames[which(tnames %in% discrim_clusters)]
+# tnames_discrim = tnames[which(tnames %in% discrim_clusters)]
 
 # Create a list of length length(tnames) wherein the i-th element of the list is a list composed of #samples+1 datasets and a row vector.
 # The vector is info_status and confirms whether or not the info dataset is complete and accurate.
@@ -108,14 +109,14 @@ tnames_discrim = tnames[which(tnames %in% discrim_clusters)]
 
 concat_geneMod = list()
 
-for(i in 1:length(tnames_discrim)){
+for(i in 1:length(tnames)){
   concat_geneMod[[i]] = list(info_status="Not Checked",info=NULL)
   incurr_clust = rep(0,length(sam_names))
   z = rep(TRUE,length(sam_names)-1)
   for(j in 1:length(sam_names)){
     tclust_currsamp = names(concat_list[[j]])
-    if(tnames_discrim[i] %in% tclust_currsamp){
-      cmdij = sprintf("concat_geneMod[[i]]$%s = concat_list[[j]][[tnames_discrim[i]]]$count",sam_names[j])
+    if(tnames[i] %in% tclust_currsamp){
+      cmdij = sprintf("concat_geneMod[[i]]$%s = concat_list[[j]][[tnames[i]]]$count",sam_names[j])
       eval(parse(text=cmdij))
       incurr_clust[j] = 1
     } else {
@@ -126,13 +127,13 @@ for(i in 1:length(tnames_discrim)){
   }
   sam_clust = which(incurr_clust==1)
   fsamp = sam_clust[1]
-  concat_geneMod[[i]]$info = concat_list[[fsamp]][[tnames_discrim[i]]]$info
+  concat_geneMod[[i]]$info = concat_list[[fsamp]][[tnames[i]]]$info
   for(k in 1:length(sam_clust)){
     fsamp_k = sam_clust[k]
     dim_orig = dim(concat_geneMod[[i]]$info)
-    dim_final = dim(concat_list[[fsamp_k]][[tnames_discrim[i]]]$info)
+    dim_final = dim(concat_list[[fsamp_k]][[tnames[i]]]$info)
     if(all(dim_orig == dim_final)){
-      z[k-1] = all(concat_geneMod[[i]]$info==concat_list[[fsamp_k]][[tnames_discrim[i]]]$info)
+      z[k-1] = all(concat_geneMod[[i]]$info==concat_list[[fsamp_k]][[tnames[i]]]$info)
     } else {
       z[k-1] = FALSE
     }
@@ -144,7 +145,7 @@ for(i in 1:length(tnames_discrim)){
   }
 }
 
-names(concat_geneMod) = tnames_discrim
+names(concat_geneMod) = tnames
 
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 # CONCAT_GENEMOD:                                                                                                                           #
@@ -217,10 +218,12 @@ for (i in 1:length(nms)) {
 }
 
 cellType_count = sum(unique(tolower(cellTypes))!="mix")
-info_mat = data.frame(Label = labels, Cell_Type = tolower(cellTypes), Total = total_cts,stringsAsFactors = FALSE)
+
+info_mat = data.frame(Label = labels, Cell_Type = tolower(cellTypes), Total = total_cts, stringsAsFactors = FALSE)
 # fin_geneMod["Sample_Info"] = list(info = info_mat,tclust_tot=length(fin_geneMod),
 #                                       cellType_count=cellType_count)
-fin_geneMod["Sample_Info"] = info_mat
+
+fin_geneMod[["Sample_Info"]] = info_mat
 
 
 # save(fin_geneMod, file = output) # Removed output from function arguments
