@@ -7,9 +7,9 @@
 \code{isodeconvMM} ... description}
 \usage{
 isoDeconvMM(directory = NULL, mix_files, pure_ref_files, fraglens_files,
-  bedfile, knownIsoforms, discrim_genes, readLen, lmax = 600,
+  bedFile, knownIsoforms, discrim_genes, readLen, lmax = 600,
   eLenMin = 1, mix_names = NULL, initPts = NULL,
-  sim = simControl())
+  sim_options = simControl(), optim_options = optimControl())
 }
 \arguments{
 \item{directory}{an optional character string denoting the path to the directory where all of the 
@@ -24,8 +24,6 @@ contains the names of the pure cell type associated with each sample}
 
 \item{fraglens_files}{a vector of the file names for the fragment length files. This data
 should contain two columns, one for () and another for ()}
-
-\item{bedfile}{name of the .bed file associated with the data}
 
 \item{knownIsoforms}{character string for the name of an RData object. This RData object is a
 list where each element of the list corresponds to a transcript cluster
@@ -51,6 +49,8 @@ of the mixture samples to be used in the optimization procedure. The matrix shou
 where k = number of pure cell types of interest. Each row corresponds to different combinations of 
 initial probability values. The column names of the matrix must correspond to the pure cell type
 names given in the second column of the pure_ref_files object (no particular ordering needed)}
+
+\item{bedfile}{name of the .bed file associated with the data}
 }
 \value{
 A list object with the following elements (...)
