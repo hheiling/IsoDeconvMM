@@ -692,7 +692,7 @@ STG.Update_Cluster.Single<-function(cdata,cellTypes,p.co,t.co,g.co,optimType,tes
 # 4 - Error in Optimization Routine
 # 5 - Optimization not conducted (Error in pure sample fit)
 
-#' @importFrom alabama auglag
+#' @import alabama
 #' @export
 STG.Update_Cluster.All<-function(all_data,cellTypes,optimType="nlminb",simple.Init,initPts){
   tmp.out = lapply(X = all_data,FUN = STG.Update_Cluster.SingMI,cellTypes= cellTypes,
