@@ -27,7 +27,6 @@ Summarize_Report<-function(final_output, restrict = FALSE, clusters = NULL, bin_
     if(length(clusters)>0){
       cdata_fin = cdata[clusters]
     } else {
-      # Eliminate clusters with "WARN" issues
       cdata_fin = cdata
     }
     
@@ -41,9 +40,11 @@ Summarize_Report<-function(final_output, restrict = FALSE, clusters = NULL, bin_
     p_mat = matrix(0, nrow = nclust, ncol = length(cto))
     colnames(p_mat) = cto
     rownames(p_mat) = clust_names
+    warn = numeric(nclust)
     
     for(i in 1:nclust){
       p_mat[i,] = cdata_fin[[i]][["mix"]][["p.est"]]
+      warn[i] = cdata_fin[[i]][["WARN"]]
     }
     
     if(any(p_mat< -1e-5)){message("Warning: Prop < -1e-5")}
@@ -73,17 +74,20 @@ Summarize_Report<-function(final_output, restrict = FALSE, clusters = NULL, bin_
     fin_est = matrix(0,nrow=1,ncol=length(cto))
     colnames(fin_est) = cto
     
+    #------------------------------------------------------#
+    # WARNING INDICATORS                                   #
+    #------------------------------------------------------#
+    # 0 - Optimization Complete
+    # 1 - Iteration Limit Reached
+    # 4 - Error in Optimization Routine
+    # 5 - Optimization not conducted (Error in pure sample fit)
+    # Note: Should only evaluate p estimates where WARN is only 0 or 1 (?)
     p.fin = spatial.median(X = p_mat[,-length(cto)])
+    # p.fin = spatial.median(X = p_mat[which(warn <= 1),-length(cto)])
     
     fin_est[1,] = c(p.fin,1-sum(p.fin))
     
-    print(fin_est)
-    print(head(p_mat))
-    print(class(histograms))
-    print(length(histograms))
-    print(class(histograms$set1))
-    
-    final_summary[[mix_names[j]]] = list(p_est = fin_est, p_mat = p_mat, histograms = histograms)
+    final_summary[[mix_names[j]]] = list(p_est = fin_est, p_mat = data.frame(p_mat, WARN = warn), histograms = histograms)
   }
   
   
