@@ -7,7 +7,6 @@
 #         Dr. Wei Sun (UNC)
 
 #' @importFrom isoform loadData
-#' @export
 loadData_djEdit <- function (countFile, bedFile, readLen, lmax = 500) {
   
   dat = countFile

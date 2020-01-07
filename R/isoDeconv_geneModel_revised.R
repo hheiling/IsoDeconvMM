@@ -44,7 +44,6 @@
 #       Listing of names for use in the generation of exon set counts for the mixture files only. Restricts output to only exon sets
 #       defined by the mixture samples to reduce modeling complexity.
 
-#' @export
 dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,knownIsoforms,fragSizeFile,readLen,lmax,eLenMin){
   
 #------------------------------------------------------------------------------------------------------------------------------------#
