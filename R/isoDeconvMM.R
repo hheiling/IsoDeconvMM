@@ -450,14 +450,13 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     
     #---- Populate Output Dataset ----#
     comp.out = list()
-    r = 1
     
     for(i in 1:length(est.chunks)){
       curr.clust.out = est.chunks[[i]]
+      clust_names = names(curr.clust.out)
       nl = length(curr.clust.out)
       for(m in 1:nl){
-        comp.out[[r]]=curr.clust.out[[m]]
-        r = r+1
+        comp.out[[clust_names[m]]]=curr.clust.out[[m]]
       }
     }
     
