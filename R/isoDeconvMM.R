@@ -34,7 +34,7 @@
 #' @return A list object with the following elements (...)
 #'  
 #' @importFrom stringr str_c str_remove
-#' @importFrom MASS glm.nb
+#' @importFrom MASS glm.nb rnegbin
 #' @export
 isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_files,
                        bedFile, knownIsoforms, discrim_genes, 
