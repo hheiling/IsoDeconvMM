@@ -13,35 +13,76 @@ isoDeconvMM(directory = NULL, mix_files, pure_ref_files, fraglens_files,
 }
 \arguments{
 \item{directory}{an optional character string denoting the path to the directory where all of the 
-mix_files, pure_ref_files, fraglens_files, and bedfile are located.}
+mix_files, pure_ref_files, fraglens_files, and bedfile are located. The working directory is set as 
+this directory}
 
-\item{mix_files}{a vector of the file names for the count files (in .txt formats) 
-for the samples containing mixtures of cells (add more details)}
+\item{mix_files}{a vector of the file names for the text files recording the number of RNA-seq 
+fragments per exon set, which should  have 2 colums "count" and "exons", without header. 
+For example:
+\verb{
+   110 ENSMUSG00000000001:1;
+    16 ENSMUSG00000000001:1;ENSMUSG00000000001:2;
+}
+There should be one file for each of the samples containing mixtures of cells. Directions to 
+create these count files can be found in the Step_0_Processes directory of the GitHub repo 
+hheiling/deconvolution <https://github.com/hheiling/deconvolution>}
 
-\item{pure_ref_files}{a data.frame or matrix where the first column is the file names for the 
-count files (in .txt formats) for the pure reference cell type samples and the second column
-contains the names of the pure cell type associated with each sample}
+\item{pure_ref_files}{a matrix where the first column is the file names for the text files
+recording the number of RNA-seq fragments per exon set (see `mix_files` for additional description),
+one for each of the pure reference cell type samples (again, see the Step_0_Processes directory in
+<https://github.com/hheiling/deconvolution> for directions on how to create these files) and the 
+second column contains the character names of the pure cell type associated with each sample}
 
-\item{fraglens_files}{a vector of the file names for the fragment length files. This data
-should contain two columns, one for () and another for ()}
+\item{fraglens_files}{a vector of the file names for the text files recording the distribution 
+of the fragment lengths, which should have 2 columns: "Frequency" and "Length", without header.
+For example:
+\verb{
+   20546 75
+   40465 76
+   37486 77
+   27533 78
+   25344 79
+}
+Directions to create these fragment length files are also available in the Step_0_Processes directory in
+the GitHub repo hheiling/deconvoltuion, <https://github.com/hheiling/deconvolution>}
 
-\item{knownIsoforms}{character string for the name of an RData object. This RData object is a
-list where each element of the list corresponds to a transcript cluster
+\item{knownIsoforms}{character string for the name of an .RData object that contains the known isoform
+information. When loaded, this object is a  list where each component is a binary matrix 
+that specifies a set of possible isoforms (e.g., isoforms from annotations). Specifically, it is a 
+binary matrix of k rows and m columns, where k is the number of 
+non-overlapping exons and m is the number of isoforms. isoforms[i,j]=1 
+indicates that the i-th exon belongs to the j-th isoform. For example, 
+the following matrix indicates the three isoforms for one gene ENSMUSG00000000003:
+\verb{
+     ENSMUST00000000003 ENSMUST00000166366 ENSMUST00000114041
+[1,]                  1                  1                  1
+[2,]                  1                  1                  1
+[3,]                  1                  1                  1
+[4,]                  1                  1                  0
+[5,]                  1                  1                  1
+[6,]                  1                  1                  1
+[7,]                  1                  1                  1
+[8,]                  1                  0                  0
+}
+When loaded, this .RData object is a list where each element of the list corresponds to a transcript cluster
 and contains a matrix of 0s and 1s, where the rows correspond to exons and the columns correspond 
 to isoforms. Instructions for creating such an RData object can be found in the (isoforms vignette)}
 
-\item{discrim_genes}{vector of genes that are suspected to have differential gene expression 
-(perhaps based on CuffLinks output)}
+\item{discrim_genes}{vector of genes that are suspected to have differential gene expression. 
+This gene list could come from CuffLinks output, \code{isoform} package output, or something similar}
 
-\item{readLen}{numeric value of the read length of the RNAseq experiment}
+\item{readLen}{numeric value of the length of a read in the RNAseq experiment}
 
 \item{lmax}{numeric value of the maximum fragment length of the experiment}
 
-\item{eLenMin}{numeric value of the minimum value of effective length which allows for errors 
-in the sequencing/mapping process}
+\item{eLenMin}{numeric value of the minimum value of effective length. 
+If the effective length of an exon or exon junction is smaller than eLenMin,
+i.e., if this exon is not included in the corresponding isoform, 
+set it to eLenMin. This is to account for possible sequencing error or
+mapping errors.}
 
 \item{mix_names}{an optional vector of the desired nicknames of the mixture samples corresponding,
-in the same order, to the mix_files list. If left as the defaul NULL value, the nicknames used
+in the same order, to the mix_files list. If left as the default \code{NULL} value, the nicknames used
 will be the names given in the mix_files minus the .txt extension}
 
 \item{initPts}{an optional matrix of initial probability estimates for the cell composition
@@ -50,7 +91,16 @@ where k = number of pure cell types of interest. Each row corresponds to differe
 initial probability values. The column names of the matrix must correspond to the pure cell type
 names given in the second column of the pure_ref_files object (no particular ordering needed)}
 
-\item{bedfile}{name of the .bed file associated with the data}
+\item{bedfile}{file name of the .bed file recording information of non-overlapping exons, which
+has 6 colums: "chr", "start", "end", "exon", "score", and "strand",
+without header. For example:
+\verb{
+  chr1    3044314 3044814 ENSMUSG00000090025:1    666     +
+  chr1    3092097 3092206 ENSMUSG00000064842:1    666     +
+}
+Directions to create this .bed file can be found in the 
+Create_BED_knownIsoforms_Files directory in the GitHub repo hheiling/deconvolution, 
+<https://github.com/hheiling/deconvolution>}
 }
 \value{
 A list object with the following elements (...)
