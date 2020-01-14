@@ -1,10 +1,12 @@
-#' @importFrom isoform effLen
-effLen <- function (ids, rjs, d, pdDist, lmax) 
-{
+# Cite isoform package here
+
+#' @export
+effLen <- function (ids, rjs, d, pdDist, lmax){
+
   # Order ids and determine number in exon set:
   ids = sort(ids)
   k = length(ids)
-  
+
 #-----------------------------------------------------#
 # Exon Sets of Length 1                               #
 #-----------------------------------------------------#
@@ -12,7 +14,7 @@ effLen <- function (ids, rjs, d, pdDist, lmax)
     eLen = effLen1(rjs[ids], d, pdDist, lmax)
     return(eLen)
   }
-  
+
 #-----------------------------------------------------#
 # Exon sets of Length >= 2                            #
 #-----------------------------------------------------#
@@ -36,7 +38,7 @@ effLen <- function (ids, rjs, d, pdDist, lmax)
       jj = 1
       while (jj <= k) {
         if (rjs[jj] < 10) {
-          ww = jj + max(which(cumsum(rjs[jj:k]) < 10)) - 
+          ww = jj + max(which(cumsum(rjs[jj:k]) < 10)) -
             1
           kk = kk + 1
           rjAdj[kk] = sum(rjs[jj:ww])
@@ -58,7 +60,7 @@ effLen <- function (ids, rjs, d, pdDist, lmax)
         for (i in 1:nrow(setr)) {
           seti = setr[i, ]
           idsi = ids[seti]
-          eLen = eLen - effLen(idsi, rjs, d, pdDist, 
+          eLen = eLen - effLen(idsi, rjs, d, pdDist,
                                lmax)
         }
       }
@@ -123,7 +125,7 @@ effLen <- function (ids, rjs, d, pdDist, lmax)
           for (i in 1:nrow(setr)) {
             for (j in 1:nrow(sets)) {
               idsij = c(setr[i, ], sets[j, ])
-              eLen = eLen - effLen(idsij, rjsN, d, pdDist, 
+              eLen = eLen - effLen(idsij, rjsN, d, pdDist,
                                    lmax)
             }
           }
@@ -142,7 +144,7 @@ effLen <- function (ids, rjs, d, pdDist, lmax)
   eLen
 }
 
-effLen1 <- function (rj, d, pdDist, lmax) 
+effLen1 <- function (rj, d, pdDist, lmax)
 {
   eLen = 0
   if (rj >= d) {
@@ -152,14 +154,14 @@ effLen1 <- function (rj, d, pdDist, lmax)
   eLen
 }
 
-effLen2 <- function (rj, rh, rk, d, pdDist, lmax) 
+effLen2 <- function (rj, rh, rk, d, pdDist, lmax)
 {
   eLen = 0
   if (rj < d || rk < d || rh + 2 * d > lmax) {
     eLen = 0
   } else {
     lRange = (2 * d + rh):min(rj + rh + rk, lmax)
-    ljRange = pmin(rj, lRange - rh - d) - pmax(d, lRange - 
+    ljRange = pmin(rj, lRange - rh - d) - pmax(d, lRange -
                                                  rh - rk) + 1
     eLen = sum(pdDist[lRange] * (ljRange))
   }

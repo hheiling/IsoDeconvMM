@@ -44,7 +44,7 @@
 #       Listing of names for use in the generation of exon set counts for the mixture files only. Restricts output to only exon sets
 #       defined by the mixture samples to reduce modeling complexity.
 
-dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,knownIsoforms,fragSizeFile,readLen,lmax,eLenMin){
+dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,knownIsoforms,fragSizeFile,readLen,lmax,eLenMin,discrim_genes){
   
 #------------------------------------------------------------------------------------------------------------------------------------#
 # LOADING THE DATA                                                                                                                   #
@@ -53,7 +53,7 @@ dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,kn
 # Calls to Dr. Sun's loadData function and generates one GeneModel for each sample
 # present in the countData vector.
 
-  print("Loading the Data")
+# See "R/loadData_edit.R" file for loadData_djEdit() function code
 for(i in 1:length(countData)){
   ct_datai = countData[[i]]
   outFile = labels[i]
@@ -188,6 +188,34 @@ pdDist = pdDist_gen(fragSizeFile,lmax)
 
 isoAll = knownIsoforms
 
+#-----------------------------------------------------------------------------#
+# ESTABLISHING CLUSTERS WITH HIGHEST LEVELS OF DISCRIMINATORY CAPABILITY      #
+#-----------------------------------------------------------------------------#
+# Limit clusters examined to those with discriminatory genes (discrim_genes)                                                                                                                       #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# Gene names for cluster given in "info" matrix                               #
+#-----------------------------------------------------------------------------#
+
+#------------------ Identify Highly Discriminatory Clusters -------------------#
+
+# User inputs discrim_genes information
+# Find names of clusters that contain these discriminatory genes
+
+all_clusters = names(concat_geneMod)
+idx_clust_tmp = numeric(length(all_clusters))
+
+for(clust in all_clusters){
+  clust_genes = unique(concat_geneMod[[clust]]$info$gene)
+  if(any(clust_genes %in% discrim_genes)){
+    idx_clust_tmp[i] = 1
+  }
+}
+
+idx_clust = which(idx_clust_tmp==1)
+discrim_clusters = unique(all_clusters[idx_clust])
+
+concat_geneMod = concat_geneMod[discrim_clusters]
+
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 # CALL TO GENEMODEL:                                                                                                                        #
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -211,6 +239,7 @@ for (i in 1:length(nms)) {
   # cluster. isoforms is a matrix which details all of the isoforms used in a transcript cluster with
   # indicators for whether a particular exon is used by an isoform.
   
+  # See "R/geneModel_multcell_edit.R" file for geneModel_multcell_Edit() function code
   gm1 = geneModel_multcell_Edit(ge1, d = readLen, pdDist, isoforms, lmax, 
                   eLenMin, verbose=1,sam_names=sam_names,mix_sams=mix_sams)
   fin_geneMod[[nm1]] = gm1

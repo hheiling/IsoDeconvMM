@@ -1,11 +1,13 @@
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 # GENEMODEL FUNCTION:                                                                                                                       #
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-# Genrrates the design matrix for each transcript cluster and also generates the output vectors for each cluster. This is performed on a    #
-# sample by sample basis.                                                                                                                   #
+# Borrows from Dr. Sun's geneModel function to generate the design matrix for each transcript cluster 
+# and also generate the output vectors for each cluster. This is performed on a sample by sample basis.                                                                                                                   #
+# Source: isoform.0.99.1 R Library
+#         Dr. Wei Sun (UNC)
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 
-#' @importFrom isoform geneModel
+# also borrows from isoform effLen() function (and effLen1 and effLen2)
 geneModel_multcell_Edit <- function (gene, d, pdDist, isoforms, lmax = length(pdDist), 
                               eLenMin = 1, verbose = 1, sam_names, mix_sams){
   
