@@ -1,6 +1,9 @@
-#' Title
+
+
+#' @title Cell Type Deconvolution using RNA Isoform-Level Expression
 #'  
-#' \code{isodeconvMM} ... description
+#' @description Calculates the proportions of pure cell type components in heterogeneous cell type samples of 
+#' RNA-seq data utilizing isoform-level expression differences
 #' 
 #' @param directory an optional character string denoting the path to the directory where all of the 
 #' mix_files, pure_ref_files, fraglens_files, and bedfile are located. The working directory is set as 
@@ -64,7 +67,7 @@
 #' and contains a matrix of 0s and 1s, where the rows correspond to exons and the columns correspond 
 #' to isoforms. Instructions for creating such an RData object can be found in the (isoforms vignette)
 #' @param discrim_genes vector of genes that are suspected to have differential gene expression. 
-#' This gene list could come from CuffLinks output, \code{isoform} package output, or something similar
+#' This gene list could come from CuffLinks output, \code{isoform} package output, or something similar.
 #' @param readLen numeric value of the length of a read in the RNAseq experiment
 #' @param lmax numeric value of the maximum fragment length of the experiment
 #' @param eLenMin numeric value of the minimum value of effective length. 
@@ -80,13 +83,51 @@
 #' where k = number of pure cell types of interest. Each row corresponds to different combinations of 
 #' initial probability values. The column names of the matrix must correspond to the pure cell type
 #' names given in the second column of the pure_ref_files object (no particular ordering needed)
+#' @param optim_options a list inheriting from class \code{optimControl} containing optimization 
+#' control parameters. See the function \code{\link{optimControl}} for more details.
 #' 
-#' @return A list object with the following elements (...)
+#' @return A list object with the following structure: first layer of list has elements associated with each
+#' of the mixture samples; second layer of list as elements associated with each transcript cluster
+#' used in the analysis, determined by the genes in the discrim_gene vector. Each of these transcript 
+#' cluster elements is itself a list with the following elements:
+#' \item{info}{}
+#' \item{candiIsoform}{}
+#' \item{I}{Number of isoforms utilized in transcript cluster}
+#' \item{E}{Number of exons in transcript cluster}
+#' \item{X}{ExI matrix of effective lengths for each of the E exon sets within each of the I isoforms}
+#' \item{info_status}{}
+#' \item{y_mix, other y vectors for each pure cell type reference sample}{Ex1 vectors of read count at 
+#' each exon set for the given mixture or pure cell type sample}
+#' \item{countN_mix, other countN values for each pure cell type reference sample}{}
+#' \item{mix}{a list with the elements rds_exons_t (vector of length E+1 where the last E elements are y_mix,
+#' and the first element is the total read counts for the mixture sample minus the sum of y_mix), 
+#' gamma.est ((I-1)xK matrix of isoform expression parameters for each cell type k), 
+#' tau.est (vector of length K of gene expression parameters in cell type k),
+#' p.est (vector of length K containing estimated proportions based on the given transcript cluster),
+#' and pm.rds.exons (ExK matrix containing posterior means for each of E exon sets in each of K cell types)
+#' }
+#' \item{"cellType1","cellType2" ...}{}
+#' \item{l_tilde}{Ix1 vector of total effective lengths of each of the I isoforms; 
+#' Each elemement of the vector, denoted l_i, is a column sum from the matrix \code{X}}
+#' \item{X.fin}{edited design matrix for new gamma parameters, where the ith column of the new matrix is
+#' \verb{X.fin_i = (X_i-[l_i/l_I]X_I)} for i = 1,...,(I-1) and \verb{X.fin_I = X_I/l_I}}
+#' \item{X.prime}{first (I-1) columns X.fin pertaining to gamma parameters}
+#' \item{alpha.est}{IxK hyperparameters governing average isoform expression levels and variances within cells of type k}
+#' \item{beta.est}{2xK hyperparameters governing gene expression levels within cells type k}
+#' \item{CellType_Order}{For outputs giving K different estimates for each of the K cell types,
+#' these outputs are ordered with respect to CellType_Order}
+#' \item{WARN}{An integer indicating the following information:
+#' \verb{
+#'              0 - Optimization Complete
+#'              1 - Iteration Limit Reached
+#'              4 - Error in Optimization Routine
+#'              5 - Optimization not conducted (Error in pure sample fit)
+#'              }}
 #'  
 #' @importFrom stringr str_c str_remove
 #' @importFrom MASS glm.nb rnegbin
 #' @export
-isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_files,
+IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_files,
                        bedFile, knownIsoforms, discrim_genes, 
                        readLen, lmax = 600, eLenMin = 1, mix_names = NULL,
                        initPts = NULL, sim_options = simControl(),
@@ -238,7 +279,7 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     final_geneMod[[j]] = fin_geneMod
   }
   
-  print("Finished Step 1")
+  print("Finished creation of gene model")
   
   #--------------------------------------------------------------------------------#
   # Step 2
@@ -262,6 +303,7 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
   ## See pure_estimation() function under "Internal isoDeconvMM Functions" heading later in this document
   pure_est = pure_estimation(modified_sig_geneMod = modified_sig_geneMod, cellTypes = ctpure_names)
   
+  print("Finished pure cell type parameter estimation")
   #-------------------------------------------------------------------#
   # Testing purposes only: Simulation    
   # If only have one reference sample for each pure cell type,
@@ -412,7 +454,7 @@ isoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     IsoDeconv_Output[[i]] = cluster_output
   }
   
-  print("Finished Step 4")
+  print("Finished mixture paramter estimation")
   
   #---------------------------------------------------------------------------------------------#
   # Step 5
@@ -621,6 +663,7 @@ comp_total_cts = function(directory, countData){
   
   return(list(total_cts = total_cts, counts_list = counts_list))
 } # End comp_total_cts() function
+
 
 #' @export
 simControl = function(sim = FALSE, sim_num = 4, seed = NULL){
