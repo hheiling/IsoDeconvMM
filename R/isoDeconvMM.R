@@ -9,14 +9,17 @@
 #' mix_files, pure_ref_files, fraglens_files, and bedfile are located. The working directory is set as 
 #' this directory
 #' @param mix_files a vector of the file names for the text files recording the number of RNA-seq 
-#' fragments per exon set, which should  have 2 colums "count" and "exons", without header. 
+#' fragments per exon set, which should  have 2 columns "count" and "exons", without header. 
 #' For example:
 #' \verb{
-#'    110 ENSMUSG00000000001:1;
-#'     16 ENSMUSG00000000001:1;ENSMUSG00000000001:2;
+#'    37  chr18_109|ENSMUSG00000024491|4;chr18_109|ENSMUSG00000024491|5;
+#'    17  chr18_109|ENSMUSG00000024491|5;
+#'    88  chr18_109|ENSMUSG00000024491|5;chr18_109|ENSMUSG00000024491|6;
 #' }
-#' There should be one file for each of the samples containing mixtures of cells. Directions to 
-#' create these count files can be found in the Step_0_Processes directory of the GitHub repo 
+#' There should be one file for each of the samples containing mixtures of cells. 
+#' The second column lists exon sets, where “chr18_109” indicates a transcript cluster, 
+#' “ENSMUSG00000024491” is the ensemble gene ID, and the numbers at the end is the exon ID
+#' Directions to create these count files can be found in the Step_0_Processes directory of the GitHub repo 
 #' hheiling/deconvolution <https://github.com/hheiling/deconvolution>
 #' @param pure_ref_files a matrix where the first column is the file names for the text files
 #' recording the number of RNA-seq fragments per exon set (see `mix_files` for additional description),
@@ -35,7 +38,7 @@
 #' }
 #' Directions to create these fragment length files are also available in the Step_0_Processes directory in
 #' the GitHub repo hheiling/deconvoltuion, <https://github.com/hheiling/deconvolution>
-#' @param bedfile file name of the .bed file recording information of non-overlapping exons, which  
+#' @param bedFile file name of the .bed file recording information of non-overlapping exons, which  
 #' has 6 colums: "chr", "start", "end", "exon", "score", and "strand",
 #' without header. For example:
 #' \verb{
@@ -46,7 +49,7 @@
 #' Create_BED_knownIsoforms_Files directory in the GitHub repo hheiling/deconvolution, 
 #' <https://github.com/hheiling/deconvolution>
 #' @param knownIsoforms character string for the name of an .RData object that contains the known isoform
-#' information. When loaded, this object is a  list where each component is a binary matrix 
+#' information. When loaded, this object is a list where each component is a binary matrix 
 #' that specifies a set of possible isoforms (e.g., isoforms from annotations). Specifically, it is a 
 #' binary matrix of k rows and m columns, where k is the number of 
 #' non-overlapping exons and m is the number of isoforms. isoforms[i,j]=1 
@@ -63,9 +66,9 @@
 #' [7,]                  1                  1                  1
 #' [8,]                  1                  0                  0
 #' }
-#' When loaded, this .RData object is a list where each element of the list corresponds to a transcript cluster
-#' and contains a matrix of 0s and 1s, where the rows correspond to exons and the columns correspond 
-#' to isoforms. Instructions for creating such an RData object can be found in the (isoforms vignette)
+#' Instructions for creating such an RData object can be found in the
+#' Create_BED_knownIsoforms_Files directory in the GitHub repo hheiling/deconvolution, 
+#' <https://github.com/hheiling/deconvolution>
 #' @param discrim_genes vector of genes that are suspected to have differential gene expression. 
 #' This gene list could come from CuffLinks output, \code{isoform} package output, or something similar.
 #' @param readLen numeric value of the length of a read in the RNAseq experiment
@@ -120,7 +123,7 @@
 #' \verb{
 #'              0 - Optimization Complete
 #'              1 - Iteration Limit Reached
-#'              4 - Error in Optimization Routine
+#'              4 - Error in Optimization Routine (Error in mixture sample fit)
 #'              5 - Optimization not conducted (Error in pure sample fit)
 #'              }}
 #'  
@@ -642,6 +645,7 @@ pure_estimation = function(modified_sig_geneMod, cellTypes){
 } # End pure_estimation() function
 
 # Downloads all count text files, computes total counts for each file
+#' @export
 comp_total_cts = function(directory, countData){
   
   counts_list = list()
