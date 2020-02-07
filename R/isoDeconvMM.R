@@ -205,7 +205,7 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
   # Load knownIsoforms .RData object:
   
   if(!is.null(knownIsoforms)){
-    assign("isoAll", get(load(sprintf("%s/%s", prefix, knownIsoforms))))
+    assign("isoAll", get(load(knownIsoforms)))
   }else{
     stop("knownIsoforms list object must be present!")
   }
