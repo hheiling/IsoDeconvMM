@@ -44,6 +44,7 @@
 #       Listing of names for use in the generation of exon set counts for the mixture files only. Restricts output to only exon sets
 #       defined by the mixture samples to reduce modeling complexity.
 
+#' @export
 dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,knownIsoforms,fragSizeFile,readLen,lmax,eLenMin,discrim_genes){
   
 #------------------------------------------------------------------------------------------------------------------------------------#
@@ -204,12 +205,17 @@ isoAll = knownIsoforms
 all_clusters = names(concat_geneMod)
 idx_clust_tmp = numeric(length(all_clusters))
 
-for(clust in all_clusters){
-  clust_genes = unique(concat_geneMod[[clust]]$info$gene)
-  if(any(clust_genes %in% discrim_genes)){
-    idx_clust_tmp[i] = 1
+if(!is.null(discrim_genes)){
+  for(clust in all_clusters){
+    clust_genes = unique(concat_geneMod[[clust]]$info$gene)
+    if(any(clust_genes %in% discrim_genes)){
+      idx_clust_tmp[i] = 1
+    }
   }
+}else{
+  idx_clust_tmp = rep(1, times = length(all_clusters))
 }
+
 
 idx_clust = which(idx_clust_tmp==1)
 discrim_clusters = unique(all_clusters[idx_clust])

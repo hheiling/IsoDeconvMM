@@ -6,6 +6,7 @@
 # Source: isoform.0.99.1 R Library
 #         Dr. Wei Sun (UNC)
 
+#' @export
 loadData_djEdit <- function (countFile, bedFile, readLen, lmax = 500) {
   
   dat = countFile

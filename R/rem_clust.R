@@ -1,5 +1,5 @@
 
-
+#' @export
 rem_clust<-function(geneMod,co,min_ind){
   indices = which(names(geneMod)!="Sample_Info")
   geneMod_labels = paste("y_",geneMod[["Sample_Info"]]$Label,sep="")
