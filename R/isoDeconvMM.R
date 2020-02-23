@@ -7,7 +7,8 @@
 #' 
 #' @param directory an optional character string denoting the path to the directory where all of the 
 #' mix_files, pure_ref_files, fraglens_files, and bedfile are located. The working directory is set as 
-#' this directory
+#' this directory. If this directory is left `NULL`, then all of the relevent files must either (a) be 
+#' located in the current working directory or (b) have their full path specified.
 #' @param mix_files a vector of the file names for the text files recording the number of RNA-seq 
 #' fragments per exon set, which should  have 2 columns "count" and "exons", without header. 
 #' For example:
@@ -82,10 +83,10 @@
 #' in the same order, to the mix_files list. If left as the default \code{NULL} value, the nicknames used
 #' will be the names given in the mix_files minus the .txt extension
 #' @param initPts an optional matrix of initial probability estimates for the cell composition
-#' of the mixture samples to be used in the optimization procedure. The matrix should have k columns,
-#' where k = number of pure cell types of interest. Each row corresponds to different combinations of 
-#' initial probability values. The column names of the matrix must correspond to the pure cell type
-#' names given in the second column of the pure_ref_files object (no particular ordering needed)
+#' of the mixture samples to be used in the optimization procedure. The matrix should have J columns,
+#' where J = number of pure cell types of interest. Each row corresponds to different combinations of 
+#' initial probability values. The column names of the matrix must be provided and must correspond 
+#' to the pure cell type names given in the second column of the pure_ref_files object (no particular ordering needed)
 #' @param optim_options a list inheriting from class \code{optimControl} containing optimization 
 #' control parameters. See the function \code{\link{optimControl}} for more details.
 #' 
@@ -279,7 +280,7 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     ## See R/rem_clust.R for rem_clust() code
     sig_geneMod = rem_clust(geneMod = fin_geneMod,co = 5,min_ind = 0)
     
-    final_geneMod[[j]] = fin_geneMod
+    final_geneMod[[j]] = sig_geneMod
   }
   
   print("Finished creation of gene model")
