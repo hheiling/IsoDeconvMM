@@ -7,7 +7,8 @@
 #' @importFrom ICSNP spatial.median
 #' @import ggplot2
 #' @export
-Summarize_Report<-function(final_output, restrict = FALSE, clusters = NULL, bin_num = 20){
+Summarize_Report<-function(final_output, restrict = FALSE, clusters = NULL, 
+                           plot_options = plotConrol()){
   
   mix_names = names(final_output)
   
@@ -57,16 +58,18 @@ Summarize_Report<-function(final_output, restrict = FALSE, clusters = NULL, bin_
     # PLOTTING the cell type info                                  #
     #--------------------------------------------------------------#
     
-    df = as.data.frame(p_mat)
-    
-    histograms = lapply(1:2, function(k){
-      mtitle = sprintf("Distribution of Estimated Proportions of (%s)",cto[k])
-      xlabel= sprintf("Prop. of (%s)",cto[k])
-      hg = ggplot(data = df, mapping = aes(df[,k])) + geom_histogram(bins = bin_num) +
-        ggtitle(label = mtitle, subtitle = sprintf("Mixture %s", mix_names[j])) + xlab(xlabel)
-    })
-    
-    names(histograms) = cto
+    if(plots_options$plots == TRUE){
+      df = as.data.frame(p_mat)
+      
+      histograms = lapply(1:2, function(k){
+        mtitle = sprintf("Distribution of Estimated Proportions of (%s)",cto[k])
+        xlabel= sprintf("Prop. of (%s)",cto[k])
+        hg = ggplot(data = df, mapping = aes(df[,k])) + geom_histogram(bins = plots_options$bins) +
+          ggtitle(label = mtitle, subtitle = sprintf("Mixture %s", mix_names[j])) + xlab(xlabel)
+      })
+      
+      names(histograms) = cto
+    }
     
     #---------------------------------------------------------------#
     # Summarizing the Values                                        #
@@ -82,17 +85,28 @@ Summarize_Report<-function(final_output, restrict = FALSE, clusters = NULL, bin_
     # 4 - Error in Optimization Routine
     # 5 - Optimization not conducted (Error in pure sample fit)
     # Note: Should only evaluate p estimates where WARN is only 0 or 1 (?)
-    p.fin = spatial.median(X = p_mat[,-length(cto)])
-    # p.fin = spatial.median(X = p_mat[which(warn <= 1),-length(cto)])
+    # p.fin = spatial.median(X = p_mat[,-length(cto)])
+    p.fin = spatial.median(X = p_mat[which(warn <= 1),-length(cto)])
     
     fin_est[1,] = c(p.fin,1-sum(p.fin))
     
-    final_summary[[mix_names[j]]] = list(p_est = fin_est, p_mat = data.frame(p_mat, WARN = warn), histograms = histograms)
+    if(plots_options$plots == TRUE){
+      final_summary[[mix_names[j]]] = list(p_est = fin_est, p_mat = data.frame(p_mat, WARN = warn), histograms = histograms)
+    }else{
+      final_summary[[mix_names[j]]] = list(p_est = fin_est, p_mat = data.frame(p_mat, WARN = warn))
+    }
+    
   }
-  
   
   #----------------------------------------------------------------#
   # RETURN values                                                  #
   #----------------------------------------------------------------#
   return(final_summary)
+  
+}
+
+#' @export
+plotsControl = function(plots = TRUE, bins = 20){
+  structure(list(plots = plots, bins = bins), 
+            class = c("plotsControl"))
 }
