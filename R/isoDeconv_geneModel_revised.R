@@ -254,7 +254,7 @@ for (i in 1:length(nms)) {
 
 cellType_count = sum(unique(tolower(cellTypes))!="mix")
 
-info_mat = data.frame(Label = labels, Cell_Type = tolower(cellTypes), Total = total_cts, stringsAsFactors = FALSE)
+info_mat = data.frame(Label = labels, Cell_Type = cellTypes, Total = total_cts, stringsAsFactors = FALSE)
 # fin_geneMod["Sample_Info"] = list(info = info_mat,tclust_tot=length(fin_geneMod),
 #                                       cellType_count=cellType_count)
 
