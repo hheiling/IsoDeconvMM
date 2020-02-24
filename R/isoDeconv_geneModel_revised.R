@@ -218,6 +218,7 @@ if(!is.null(discrim_genes)){
 }
 
 cat("Number of selected clusters: ", sum(idx_clust_tmp), "\n")
+save(concat_geneMod, "test_concat_geneMod.RData")
 
 idx_clust = which(idx_clust_tmp==1)
 discrim_clusters = unique(all_clusters[idx_clust])
