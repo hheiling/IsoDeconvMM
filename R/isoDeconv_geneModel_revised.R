@@ -208,7 +208,7 @@ idx_clust_tmp = numeric(length(all_clusters))
 
 if(!is.null(discrim_genes)){
   for(clust in all_clusters){
-    clust_genes = unique(unlist(str_split(concat_geneMod[[clust]]$info$gene, ":")))
+    clust_genes = unique(unlist(str_split(concat_geneMod[[clust]]$info$gene, pattern = ":")))
     if(any(clust_genes %in% discrim_genes)){
       idx_clust_tmp[which(all_clusters == clust)] = 1
     }
@@ -217,6 +217,7 @@ if(!is.null(discrim_genes)){
   idx_clust_tmp = rep(1, times = length(all_clusters))
 }
 
+cat("Number of selected clusters: ", sum(idx_clust_tmp), "\n")
 
 idx_clust = which(idx_clust_tmp==1)
 discrim_clusters = unique(all_clusters[idx_clust])
