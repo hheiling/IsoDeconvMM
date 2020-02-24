@@ -8,7 +8,7 @@
 #' @import ggplot2
 #' @export
 Summarize_Report<-function(final_output, restrict = FALSE, clusters = NULL, 
-                           plot_options = plotConrol()){
+                           plots_options = plotsConrol()){
   
   mix_names = names(final_output)
   
