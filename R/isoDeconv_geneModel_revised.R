@@ -218,12 +218,16 @@ if(!is.null(discrim_genes)){
 }
 
 cat("Number of selected clusters: ", sum(idx_clust_tmp), "\n")
-save(concat_geneMod, "test_concat_geneMod.RData")
 
 idx_clust = which(idx_clust_tmp==1)
 discrim_clusters = unique(all_clusters[idx_clust])
 
+cat("Length discrim_clusters: ", length(discrim_clusters), "\n")
+
 concat_geneMod = concat_geneMod[discrim_clusters]
+
+cat("Ending length concat_geneMod: ", length(concat_geneMod), "\n")
+save(concat_geneMod, file = "test_concat_geneMod.RData")
 
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 # CALL TO GENEMODEL:                                                                                                                        #
