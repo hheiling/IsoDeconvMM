@@ -7,7 +7,7 @@
 IsoDeconvMM(directory = NULL, mix_files, pure_ref_files, fraglens_files,
   bedFile, knownIsoforms, discrim_genes, readLen, lmax = 600,
   eLenMin = 1, mix_names = NULL, initPts = NULL,
-  sim_options = simControl(), optim_options = optimControl())
+  optim_options = optimControl())
 }
 \arguments{
 \item{directory}{an optional character string denoting the path to the directory where all of the 

@@ -134,7 +134,7 @@
 IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_files,
                        bedFile, knownIsoforms, discrim_genes, 
                        readLen, lmax = 600, eLenMin = 1, mix_names = NULL,
-                       initPts = NULL, sim_options = simControl(),
+                       initPts = NULL,
                        optim_options = optimControl()){
   
   #-----------------------------------------------------------------------------#
@@ -162,12 +162,27 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     labels_pure[locations] = labels_ref
   }
   
+  if(!is.null(mix_names)){
+    labels_mix = mix_names
+  }else{
+    labels_mix = str_c("mix",1:length(mix_files))
+  }
+  
   # Download all count text files, compute total counts for each file
   # Output: list with elements total_cts, counts_list
   ## See comp_total_cts() function under "Internal isoDeconvMM Functions" heading later in this document
   pure_input = comp_total_cts(directory = directory, countData = countData_pure)
+  pure_counts = pure_input$counts_list
   
   mix_input = comp_total_cts(directory = directory, countData = countData_mix)
+  mix_counts = mix_input$counts_list
+  
+  countData = pure_counts
+  countData[(length(pure_counts)+1):(length(pure_counts)+length(mix_counts))] = mix_counts
+  
+  if(!(length(fraglens_files) %in% c(1, length(mix_files)))){
+    stop("Length of fraglens_files must be equal to 1 or length of mix_files")
+  }
   
   fraglens_list = list()
   for(i in 1:length(fraglens_files)){
@@ -180,26 +195,6 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     fraglens_list[[i]] = fraglens
   }
   
-  # Package mixture counts, pure sample counts, and fragment size information together
-  
-  files = list()
-  
-  for(i in 1:length(mix_files)){
-    
-    mix_counts = mix_input$counts_list[[i]]
-    pure_counts = pure_input$counts_list
-    
-    countData = pure_counts
-    countData[[(length(pure_counts)+1)]] = mix_counts
-    
-    total_cts = c(pure_input$total_cts, mix_input$total_cts[i])
-    
-    fragSizeFile = fraglens_list[[i]]
-    
-    files[[i]] = list(countData = countData, total_cts = total_cts,
-                      fragSizeFile = fragSizeFile)
-    
-  }
   
   # CHECKING Presence of Isoforms File:
   # IsoDeconv requires a list of known isoforms in order to model intra-sample heterogeneity. Stops program if file not present.
@@ -247,40 +242,47 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
   }else{
     stop("initPts must be a matrix, see documentation for details")
   }
-
+  
   #--------------------------------------------------------------------------------#
   # Step 1
-  # Calls dev_compiled_geneMod function, which is an edit of Dr. Wei Sun's
+  # concat_geneMod() extracts gene info, counts, and exon information
+  # geneModel_creatoin() calls geneModel_multcell_Edid(), which is an edit of Dr. Wei Sun's
   # geneModel creation problem (after edits, now accommodates multiple cell types)
   # geneModel() altered by:                                                                                                                        
   #    Douglas Roy Wilson, Jr. 
   #--------------------------------------------------------------------------------#
   
-  labels = c(labels_pure, "mix")
-  cellTypes = c(cellTypes_pure, "mix")
+  labels = c(labels_pure, labels_mix)
+  cellTypes = c(cellTypes_pure, rep("mix", times = length(mix_files)))
+  
+  concat_geneMod = cluster_info(countData = countData, labels = labels, cellTypes = cellTypes, 
+                                bedFile = bedFile_info, discrim_genes = discrim_genes)
   
   final_geneMod = list()
   
-  for(j in 1:length(files)){
+  for(j in 1:length(mix_files)){
+    cellTypes_sub = c(cellTypes_pure, "mix")
+    labels_sub = c(labels_pure, labels_mix[j])
+    total_cts = c(pure_input$total_cts, mix_input$total_cts[j])
+    if(length(fraglens_list) == 1){
+      fragSizeFile = fraglens_list[[1]]
+    }else if(length(fraglens_list) == length(mix_files)){
+      fragSizeFile = fraglens_list[[j]]
+    }
     
-    file = files[[i]]
+    # Need to select specific components of concat_geneMod?
     
-    countData = file$countData
-    total_cts = file$total_cts
-    fragSizeFile = file$fragSizeFile
-    
-    # Call dev_compiled_geneMod function
-    ## See R/isoDeconv_geneModel_revised.R for dev_compiled_geneMod() code
-    fin_geneMod = dev_compiled_geneMod(countData=countData,labels = labels,total_cts = total_cts, 
-                                       cellTypes=cellTypes, bedFile=bedFile_info,knownIsoforms=isoAll,
-                                       fragSizeFile=fragSizeFile,readLen=readLen,lmax=lmax,
-                                       eLenMin=eLenMin,discrim_genes=discrim_genes)
+    fin_geneMod = geneModel_creation(concat_geneMod = concat_geneMod, fragSizeFile = fragSizeFile, 
+                                     cellTypes = cellTypes_sub, labels = labels_sub,
+                                     knownIsoforms = isoAll, readLen = readLen, lmax = lmax, 
+                                     eLenMin = eLenMin, total_cts = total_cts)
     
     # Perform some checks on the geneMod output
     ## See R/rem_clust.R for rem_clust() code
     sig_geneMod = rem_clust(geneMod = fin_geneMod,co = 5,min_ind = 0)
     
     final_geneMod[[j]] = sig_geneMod
+    
   }
   
   print("Finished creation of gene model")
@@ -315,108 +317,6 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
   # Use pure cell type parameter estimates from Step 3 to simulate
   # additional counts
   #-------------------------------------------------------------------#
-  
-  if(sim_options$sim == TRUE){
-    
-    tmp.data = pure_est[[1]]
-    
-    sim_num = sim_options$sim_num
-    
-    sim_data = list()
-    
-    if(!is.null(sim_options$seed)){
-      set.seed(sim_options$seed)
-    }
-    
-    clusters = names(tmp.data)
-    
-    # Simulate additional pure cell type reference sample counts
-    
-    for(clust in clusters){
-      
-      clust_data = tmp.data[[clust]]
-      alpha = clust_data$alpha.est
-      
-      for(i in 1:length(ctpure_names)){
-        
-        ct_name = ctpure_names[i]
-        y_label = sprintf("y_%s", labels_pure[i])
-        y = clust_data[[y_label]]
-        X = clust_data$X
-        X_a = X %*% alpha[,i]
-        
-        fit = glm.nb(y ~ X_a - 1, link = log)
-        theta = fit$theta
-        if(theta > 1){
-          cat("Likely issue with glm.nb estimation procedure for following cluster: \n")
-          cat("clust: ", clust, "\n")
-          cat("i: ", i, "\n")
-          cat("Unusually high theta: ", theta, "\n")
-          theta = runif(1, 0.1, 0.3)
-          cat("Randomly selected new theta: ", theta, "\n")
-        }
-        nb_means = exp(cbind(X_a) %*% fit$coefficients)
-        nb_means = ifelse(nb_means > (5*max(y)), max(y), nb_means)
-        y_sim = matrix(0, nrow = nrow(X), ncol = sim_num)
-        
-        for(j in 1:ncol(y_sim)){
-          y_sim[,j] = rnegbin(n = nrow(X), mu = nb_means, theta = theta)
-        }
-        
-        y_cols = str_c(sprintf("y_%s", ct_name), "_ref",2:(sim_num+1))
-        colnames(y_sim) = y_cols
-        
-        sim_data[[clust]][[ct_name]] = list(y_sim = y_sim, seed = sim_options$seed, mu = nb_means, theta = theta)
-        
-        # if(anyNA(y_sim)){
-        #   cat("clust: ", clust, "\n")
-        #   cat("i: ", i, "\n")
-        #   cat("at least one NA in y_sim \n")
-        # }
-        
-      }
-    }
-    
-    # Using simulated counts, integrate with original Step 2 modified_sig_geneMod list object
-    
-    sig_geneMod = modified_sig_geneMod[[1]]
-    
-    step4_sim_data = list()
-    
-    for(clust in clusters){
-      clust_data = sig_geneMod[[clust]]
-      sim_result = sim_data[[clust]]
-      
-      step4_sim_data[[clust]] = clust_data
-      
-      for(i in 1:length(ctpure_names)){
-        ct_name = ctpure_names[i]
-        label_suffix = labels_pure[i]
-        y = clust_data[[y_label]]
-        y_sim = sim_result[[ct_name]]$y_sim
-        y_cols = colnames(y_sim)
-        for(j in 1:ncol(y_sim)){
-          y_k = y_sim[,j]
-          exons = clust_data[[sprintf("countN_%s", label_suffix)]][,1]
-          step4_sim_data[[clust]][[y_cols[j]]] = y_k
-          step4_sim_data[[clust]][[sprintf("countN_%s", str_remove(y_cols[j], "y_"))]] = data.frame(exons = exons, count = y_k)
-          step4_sim_data[[clust]][[ct_name]][["rds_exons"]] = 
-            cbind(step4_sim_data[[clust]][[ct_name]][["rds_exons"]], c(total_cts[i] - sum(y_k), y_k))
-        }
-      }
-    }
-    
-    sim_output = list(step4_sim_data)
-    
-    print("Finished Simulation")
-    
-    # Once the step4_sim_data list is complete, re-run Step 3
-    
-    pure_est = pure_estimation(modified_sig_geneMod = sim_output, cellTypes = ctpure_names)
-    
-    print("Finished redo of Step 3 with simulated data")
-    
-  }
   
   # Step 4
   #------------------------------------------------------------------------------#
@@ -628,7 +528,7 @@ pure_estimation = function(modified_sig_geneMod, cellTypes){
         tmp_j[[clust]][["E"]] = tmp.data[[clust]][["E"]]
         tmp_j[[clust]][["alpha.est"]] = tmp.data[[clust]][["alpha.est"]]
         tmp_j[[clust]][["beta.est"]] = tmp.data[[clust]][["beta.est"]]
-        for(ct in ctpure_names){
+        for(ct in cellTypes){
           tmp_j[[clust]][[ct]][["tau.hat"]] = tmp.data[[clust]][[ct]][["tau.hat"]]
           tmp_j[[clust]][[ct]][["gamma.hat"]] = tmp.data[[clust]][[ct]][["tau.hat"]]
         }
@@ -670,11 +570,11 @@ comp_total_cts = function(directory, countData){
 } # End comp_total_cts() function
 
 
-#' @export
-simControl = function(sim = FALSE, sim_num = 4, seed = NULL){
-  structure(list(sim = sim, sim_num = sim_num, seed = seed), 
-            class = c("simControl"))
-}
+# export
+# simControl = function(sim = FALSE, sim_num = 4, seed = NULL){
+#   structure(list(sim = sim, sim_num = sim_num, seed = seed), 
+#             class = c("simControl"))
+# }
 
 #' @export
 optimControl = function(simple.Init = FALSE, optimType = c("nlminb")){
