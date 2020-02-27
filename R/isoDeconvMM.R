@@ -476,11 +476,11 @@ pure_estimation = function(modified_sig_geneMod, cellTypes){
   
   pure_est = list()
   
-  sig_geneMod = modified_sig_geneMod[[1]]
-  
   for(j in 1:length(modified_sig_geneMod)){
     
     if(j == 1){
+      
+      sig_geneMod = modified_sig_geneMod[[j]]
       
       # Only need to calcuate the pure sample parameters once
       
@@ -518,9 +518,12 @@ pure_estimation = function(modified_sig_geneMod, cellTypes){
       
     }else{
       
-      tmp_j = sig_geneMod
+      tmp_j = modified_sig_geneMod[[j]][which(names(modified_sig_geneMod[[j]])!="Sample_Info")]
+      
+      tmp.data = pure_est[[1]]
+      
       # Share calculated pure sample paramters with other list elements associated with mixtures samples
-      for(clust in names(sig_geneMod)){
+      for(clust in names(tmp.data)){
         tmp_j[[clust]][["X.fin"]] = tmp.data[[clust]][["X.fin"]]
         tmp_j[[clust]][["X.prime"]] = tmp.data[[clust]][["X.prime"]]
         tmp_j[[clust]][["l_tilde"]] = tmp.data[[clust]][["l_tilde"]]
