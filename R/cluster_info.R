@@ -3,8 +3,6 @@
 #' @export
 cluster_info = function(countData, labels, cellTypes, bedFile, discrim_genes){
   
-  cat("labels: ", labels, "\n")
-  cat("cellTypes: ", cellTypes, "\n")
   #------------------------------------------------------------------------------------------------------------------------------------#
   # LOADING THE DATA                                                                                                                   #
   #------------------------------------------------------------------------------------------------------------------------------------#
@@ -16,7 +14,7 @@ cluster_info = function(countData, labels, cellTypes, bedFile, discrim_genes){
   for(i in 1:length(countData)){
     ct_datai = countData[[i]]
     outFile = labels[i]
-    cat("Loading data for ", outFile, "\n")
+    cat("\n Loading data for ", outFile, "\n")
     cmdi = sprintf("%s = loadData_djEdit(ct_datai,bedFile,readLen,lmax)",outFile)
     eval(parse(text=cmdi))
   }

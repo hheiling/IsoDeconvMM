@@ -350,7 +350,8 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
       ## See R/Production_Functions_MixedSamp.R for STG.Updat_Cluster.All() code
       curr.clust.out = STG.Update_Cluster.All(all_data=curr.clust.opt, cellTypes = ctpure_names,
                                               optimType=optim_options$optimType, 
-                                              simple.Init=optim_options$simple.Init, initPts = initPts)
+                                              simple.Init=optim_options$simple.Init, 
+                                              initPts = initPts)
       
       cluster_output[[m]] = curr.clust.out
     }
