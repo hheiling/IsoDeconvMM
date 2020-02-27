@@ -357,9 +357,11 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
     }
     
     IsoDeconv_Output[[i]] = cluster_output
+    
+    cat("Finished mixture param estimation for mix file ", j, "\n")
   }
   
-  print("Finished mixture paramter estimation")
+  print("Finished mixture paramter estimation for all samples")
   
   #---------------------------------------------------------------------------------------------#
   # Step 5
