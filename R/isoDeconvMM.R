@@ -129,7 +129,6 @@
 #'              }}
 #'  
 #' @importFrom stringr str_c str_remove
-#' @importFrom MASS glm.nb rnegbin
 #' @export
 IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_files,
                        bedFile, knownIsoforms, discrim_genes, 
@@ -225,11 +224,11 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, fraglens_fil
   if(is.null(initPts)){
     initPts = matrix(1/length(ctpure_names), nrow = 1, ncol = length(ctpure_names))
     colnames(initPts) = ctpure_names
-  }else if(class(initPts = "matrix")){
+  }else if(class(initPts) == "matrix"){
     if(ncol(initPts) != length(ctpure_names)){
       stop("number of columns of initPts must be equal to the number of pure reference cell types")
     }
-    if(!(colnames(initPts) %in% ctpure_names)){
+    if(!all(colnames(initPts) %in% ctpure_names)){
       stop("colnames of initPts must match pure cell type names in pure_ref_files; see documentation for more details")
     }
     if(sum(initPts > 1) > 0 | sum(initPts < 0) > 0 | (nrow(initPts) > 1 & sum(rowSums(initPts) > 1) > 0)){

@@ -8,6 +8,6 @@ Maintainer: Hillary Heiling <hheiling@live.unc.edu>
 Description: Performs Cell Type Deconvolution using Differential Isoform Information. Edit with more details. More about what it does (maybe more than one line). 
 License: GPL (>= 2)
 Encoding: UTF-8
-Imports: Imports: Rcpp (>= 1.0.1), alabama, gtools, ICSNP, stringr, MASS
+Imports: Rcpp (>= 1.0.1), alabama, gtools, ICSNP, stringr
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 6.1.1
