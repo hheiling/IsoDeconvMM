@@ -227,7 +227,7 @@ cat("Length discrim_clusters: ", length(discrim_clusters), "\n")
 concat_geneMod = concat_geneMod[discrim_clusters]
 
 cat("Ending length concat_geneMod: ", length(concat_geneMod), "\n")
-save(concat_geneMod, file = "test_concat_geneMod.RData")
+# save(concat_geneMod, file = "test_concat_geneMod.RData")
 
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 # CALL TO GENEMODEL:                                                                                                                        #

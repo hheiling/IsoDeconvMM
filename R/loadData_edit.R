@@ -10,16 +10,6 @@
 loadData_djEdit <- function (countFile, bedFile, readLen, lmax = 500) {
   
   dat = countFile
-  # colNames = c("count", "exons") # column names of dat
-  # 
-  # if (ncol(dat) != 2) {
-  #   cN = sprintf("%s and %s", colNames[1], colNames[2])
-  #   stop(countFile, " should have 2 columns: ", cN, "\n")
-  # }
-  # 
-  # names(dat) = colNames
-  # dim(dat)
-  # dat[1:2, ]
   
   groupIDs = strsplit(dat$exons, split = ";", fixed = TRUE)
   
