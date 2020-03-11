@@ -130,7 +130,7 @@
 #'  
 #' @importFrom stringr str_c str_remove
 #' @export
-IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, count_col = 2,
+IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files,
                        fraglens_files,
                        bedFile, knownIsoforms, discrim_genes, 
                        readLen, lmax = 600, eLenMin = 1, mix_names = NULL,
@@ -171,10 +171,10 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files, count_col = 
   # Download all count text files, compute total counts for each file
   # Output: list with elements total_cts, counts_list
   ## See comp_total_cts() function under "Internal isoDeconvMM Functions" heading later in this document
-  pure_input = comp_total_cts(directory = directory, countData = countData_pure, count_col = count_col)
+  pure_input = comp_total_cts(directory = directory, countData = countData_pure)
   pure_counts = pure_input$counts_list
   
-  mix_input = comp_total_cts(directory = directory, countData = countData_mix, count_col = count_col)
+  mix_input = comp_total_cts(directory = directory, countData = countData_mix)
   mix_counts = mix_input$counts_list
   
   countData = pure_counts
@@ -553,7 +553,7 @@ pure_estimation = function(modified_sig_geneMod, cellTypes){
 
 # Downloads all count text files, computes total counts for each file
 #' @export
-comp_total_cts = function(directory, countData, count_col){
+comp_total_cts = function(directory, countData){
   
   counts_list = list()
   total_cts = numeric(length(countData))
@@ -563,9 +563,9 @@ comp_total_cts = function(directory, countData, count_col){
     if (ncol(countsi) != 2) {
       stop(countFile, " should have 2 columns: count and exons \n")
     }
-    if(count_col == 1){
+    if(all(is.numeric(countsi[,1]))){
       colNames = c("count","exons")
-    }else if(count_col == 2){
+    }else if(all(is.numeric(countsi[,2]))){
       colNames = c("exons","count")
     }
     

@@ -4,9 +4,9 @@
 \alias{IsoDeconvMM}
 \title{Cell Type Deconvolution using RNA Isoform-Level Expression}
 \usage{
-IsoDeconvMM(directory = NULL, mix_files, pure_ref_files, count_col = 2,
-  fraglens_files, bedFile, knownIsoforms, discrim_genes, readLen,
-  lmax = 600, eLenMin = 1, mix_names = NULL, initPts = NULL,
+IsoDeconvMM(directory = NULL, mix_files, pure_ref_files, fraglens_files,
+  bedFile, knownIsoforms, discrim_genes, readLen, lmax = 600,
+  eLenMin = 1, mix_names = NULL, initPts = NULL,
   optim_options = optimControl())
 }
 \arguments{
