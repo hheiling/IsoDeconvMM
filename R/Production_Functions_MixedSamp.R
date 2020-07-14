@@ -276,6 +276,7 @@ update.iso.STG2<-function(X.fin,X.prime,I,l_tilde,
   
   if(optimType=="nlminb"){
     out.iso.r = nlminb(start = -log(gamma.init),objective = o.g.CFUN,gradient = g.g.CFUN,hessian = h.g.CFUN)
+    # out.iso.r = nlminb(start = -log(gamma.init),objective = o.g.CFUN,gradient = g.g.CFUN,hessian = h.g.CFUN, lower = ?)
   } else if(optimType=="BFGS"){
     out.iso.r = optim(par = -log(gamma.init),fn = o.g.CFUN,gr = g.g.CFUN,method = "BFGS",control = list(maxit=5000))
   } else if(optimType=="NM"){
@@ -386,6 +387,28 @@ STG.Update_Cluster.SingMI<-function(cdata,cellTypes,p.co,t.co,g.co,optimType,ite
           tmp.new = STG.Update_Cluster.Single(cdata=cdata,cellTypes=cellTypes,p.co=p.co,t.co=t.co,
                                               g.co=g.co,optimType=optimType,
                                               test.init=c(test.init[j,]))
+          
+          elements_NA = sapply(tmp.new, FUN = function(x) sum(is.na(x)))
+          if(sum(elements_NA) > 0){
+            # If any elements of tmp.new are NA, then skip
+            message("NA values occurred in fit ", j, ", skipping to next start point")
+            next
+          }else if(sum(sapply(tmp.out, FUN = function(x) sum(is.na(x))))){
+            # If first tmp.out has NA values but tmp.new is fine, replace tmp.out with tmp.new 
+            # and skip to next start point
+            tmp.out = tmp.new
+            next
+          }
+          
+          # If applyLik output is NA, skip
+          if(is.na(applyLik(tmp.new))){
+            message("NA values occurred in fit ", j, ", skipping to next start point")
+            next
+          }else if(is.na(applyLik(tmp.out))){ # in case tmp.out results in NA value
+            tmp.out = tmp.new
+            next
+          }
+          
           if(applyLik(tmp.new)>applyLik(tmp.out)){
             tmp.out = tmp.new
           }
@@ -409,9 +432,33 @@ STG.Update_Cluster.SingMI<-function(cdata,cellTypes,p.co,t.co,g.co,optimType,ite
         tmp.new = STG.Update_Cluster.Single(cdata=cdata,cellTypes=cellTypes,p.co=p.co,t.co=t.co,
                                             g.co=g.co,optimType=optimType,
                                             test.init=c(test.init[j,]))
+        
+        
+        elements_NA = sapply(tmp.new, FUN = function(x) sum(is.na(x)))
+        if(sum(elements_NA) > 0){
+          # If any elements of tmp.new are NA, then skip
+          message("NA values occurred in fit ", j, ", skipping to next start point")
+          next
+        }else if(sum(sapply(tmp.out, FUN = function(x) sum(is.na(x))))){
+          # If first tmp.out has NA values but tmp.new is fine, replace tmp.out with tmp.new 
+          # and skip to next start point
+          tmp.out = tmp.new
+          next
+        }
+        
+        # If applyLik output is NA, skip
+        if(is.na(applyLik(tmp.new))){
+          message("NA values occurred in fit ", j, ", skipping to next start point")
+          next
+        }else if(is.na(applyLik(tmp.out))){ # in case tmp.out results in NA value
+          tmp.out = tmp.new
+          next
+        }
+        
         if(applyLik(tmp.new)>applyLik(tmp.out)){
           tmp.out = tmp.new
         }
+        
       }
     }
     
