@@ -131,11 +131,20 @@
 #' @importFrom stringr str_c str_remove
 #' @export
 IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files,
-                       fraglens_files,
-                       bedFile, knownIsoforms, discrim_genes, 
+                       fraglens_files, bedFile, knownIsoforms, 
+                       discrim_genes = NULL, discrim_clusts = NULL,
                        readLen, lmax = 600, eLenMin = 1, mix_names = NULL,
                        initPts = NULL,
                        optim_options = optimControl()){
+  
+  # time0 = proc.time()
+  
+  if(is.null(discrim_genes) & is.null(discrim_clusts)){
+    stop("Either discrim_genes or discrim_clusts must be specified \n")
+  }else if(!is.null(discrim_genes) & !is.null(discrim_clusts)){
+    warning("Both discrim_genes and discrim_clusts specified, ",
+            "will only use discrim_clusts \n", immediate. = T)
+  }
   
   #-----------------------------------------------------------------------------#
   # Download all needed files, convert input items to useful formats            #
@@ -219,6 +228,7 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files,
   names(bedFile_info) = bf_colNames
   
   print("Finished loading supporting files")
+  # time1 = proc.time()
   
   # Check initPts is specified correctly OR create initPts matrix if not specified
   
@@ -238,6 +248,11 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files,
     
     # Re-arrange column order of initPts matrix to match order of ctpure_names
     initPts = initPts[,ctpure_names]
+    if(!is.matrix(initPts)){
+      # If only one initial point, convert above result from vector to matrix with one row
+      initPts = matrix(initPts, nrow = 1)
+    }
+    colnames(initPts) = ctpure_names
     
   }else{
     stop("initPts must be a matrix, see documentation for details")
@@ -256,7 +271,8 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files,
   cellTypes = c(cellTypes_pure, rep("mix", times = length(mix_files)))
   
   concat_geneMod = cluster_info(countData = countData, labels = labels, cellTypes = cellTypes, 
-                                bedFile = bedFile_info, discrim_genes = discrim_genes)
+                                bedFile = bedFile_info, discrim_genes = discrim_genes,
+                                discrim_clusts = discrim_clusts)
   
   final_geneMod = list()
   
@@ -286,6 +302,7 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files,
   }
   
   print("Finished creation of gene model")
+  # time2 = proc.time()
   
   #--------------------------------------------------------------------------------#
   # Step 2
@@ -310,6 +327,7 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files,
   pure_est = pure_estimation(modified_sig_geneMod = modified_sig_geneMod, cellTypes = ctpure_names)
   
   print("Finished pure cell type parameter estimation")
+  # time3 = proc.time()
   #-------------------------------------------------------------------#
   # Testing purposes only: Simulation    
   # If only have one reference sample for each pure cell type,
@@ -362,6 +380,7 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files,
   }
   
   print("Finished mixture paramter estimation for all samples")
+  # time4 = proc.time()
   
   #---------------------------------------------------------------------------------------------#
   # Step 5
@@ -404,6 +423,12 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files,
   }else{
     names(Final_Compiled_Output) = mix_names
   }
+  
+  # Output timings
+  # time_record = rbind(time0[1:3],time1[1:3],time2[1:3],time3[1:3],time4[1:3])
+  # rownames(time_record) = c("Start","End Loading","End Gene Model","End Pure Fit","End Mixture Fit")
+  # 
+  # Final_Compiled_Output[["Time"]] = time_record
   
   return(Final_Compiled_Output)
   
@@ -559,9 +584,21 @@ comp_total_cts = function(directory, countData){
   total_cts = numeric(length(countData))
   
   for(i in 1:length(countData)){
-    countsi = read.table(countData[i], as.is = T)
-    if (ncol(countsi) != 2) {
-      stop(countFile, " should have 2 columns: count and exons \n")
+    countsi = read.table(file = countData[i], as.is = T)
+    if(ncol(countsi) != 2){
+      if(ncol(countsi) == 1 & !is.null(rownames(countsi))){
+        # Perform some checks 
+        if(!all(is.numeric(countsi[,1]))){
+          stop(countData[i], " should have 2 columns: count and exons \n", 
+               "OR should have column of counts with rownames of exons \n")
+        }
+        countsi[,2] = rownames(countsi)
+        colnames(countsi) = NULL
+        rownames(countsi) = NULL
+      }else{
+        stop(countData[i], " should have 2 columns: count and exons \n", 
+             "OR should have column of counts with rownames of exons \n")
+      }
     }
     if(all(is.numeric(countsi[,1]))){
       colNames = c("count","exons")
