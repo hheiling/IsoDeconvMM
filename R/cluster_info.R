@@ -1,7 +1,7 @@
 
 #' @importFrom stringr str_split
 #' @export
-cluster_info = function(countData, labels, cellTypes, bedFile, discrim_genes){
+cluster_info = function(countData, labels, cellTypes, bedFile, discrim_genes, discrim_clusts){
   
   #------------------------------------------------------------------------------------------------------------------------------------#
   # LOADING THE DATA                                                                                                                   #
@@ -128,32 +128,38 @@ cluster_info = function(countData, labels, cellTypes, bedFile, discrim_genes){
   #-----------------------------------------------------------------------------#
   # ESTABLISHING CLUSTERS WITH HIGHEST LEVELS OF DISCRIMINATORY CAPABILITY      #
   #-----------------------------------------------------------------------------#
-  # Limit clusters examined to those with discriminatory genes (discrim_genes)                                                                                                                       #
+  # Limit clusters examined to those with discriminatory genes 
+  # (discrim_genes or discrim_clusts)                                                                                                                       #
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   # Gene names for cluster given in "info" matrix                               #
   #-----------------------------------------------------------------------------#
   
   #------------------ Identify Highly Discriminatory Clusters -------------------#
   
-  # User inputs discrim_genes information
+  # User inputs discrim_genes or discrim_clusts information
   # Find names of clusters that contain these discriminatory genes
   
-  all_clusters = names(concat_geneMod)
-  idx_clust_tmp = numeric(length(all_clusters))
-  
-  if(!is.null(discrim_genes)){
+  if(!is.null(discrim_clusts)){
+    
+    discrim_clusters = discrim_clusts
+    
+  }else if(!is.null(discrim_genes)){
+    
+    all_clusters = names(concat_geneMod)
+    idx_clust_tmp = numeric(length(all_clusters))
+    
+    
     for(clust in all_clusters){
       clust_genes = unique(unlist(str_split(concat_geneMod[[clust]]$info$gene, pattern = ":")))
       if(any(clust_genes %in% discrim_genes)){
         idx_clust_tmp[which(all_clusters == clust)] = 1
       }
     }
-  }else{
-    idx_clust_tmp = rep(1, times = length(all_clusters))
+    
+    idx_clust = which(idx_clust_tmp==1)
+    discrim_clusters = unique(all_clusters[idx_clust])
+    
   }
-  
-  idx_clust = which(idx_clust_tmp==1)
-  discrim_clusters = unique(all_clusters[idx_clust])
   
   cat("Length discrim_clusters: ", length(discrim_clusters), "\n")
   
