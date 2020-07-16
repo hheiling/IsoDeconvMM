@@ -1,5 +1,4 @@
 
-#' @export
 geneModel_creation = function(concat_geneMod, fragSizeFile, cellTypes, labels,
                             knownIsoforms, readLen, lmax, eLenMin, total_cts){
   

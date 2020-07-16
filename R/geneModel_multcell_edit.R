@@ -8,7 +8,6 @@
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 
 # also borrows from isoform effLen() function (and effLen1 and effLen2)
-#' @export
 geneModel_multcell_Edit <- function (gene, d, pdDist, isoforms, lmax = length(pdDist), 
                               eLenMin = 1, verbose = 1, sam_names, mix_sams){
   

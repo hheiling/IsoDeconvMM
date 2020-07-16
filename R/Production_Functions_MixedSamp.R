@@ -740,7 +740,6 @@ STG.Update_Cluster.Single<-function(cdata,cellTypes,p.co,t.co,g.co,optimType,tes
 # 5 - Optimization not conducted (Error in pure sample fit)
 
 #' @import alabama
-#' @export
 STG.Update_Cluster.All<-function(all_data,cellTypes,optimType="nlminb",simple.Init,initPts){
   tmp.out = lapply(X = all_data,FUN = STG.Update_Cluster.SingMI,cellTypes= cellTypes,
                    p.co = 1e-7,t.co=1e-8,g.co=1e-7,optimType=optimType,iter.co=15000,

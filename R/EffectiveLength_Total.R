@@ -1,6 +1,5 @@
 # Cite isoform package here
 
-#' @export
 effLen <- function (ids, rjs, d, pdDist, lmax){
 
   # Order ids and determine number in exon set:

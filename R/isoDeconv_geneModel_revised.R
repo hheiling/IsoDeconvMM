@@ -45,7 +45,6 @@
 #       defined by the mixture samples to reduce modeling complexity.
 
 #' @importFrom stringr str_split
-#' @export
 dev_compiled_geneMod <- function(countData,labels,cellTypes,total_cts,bedFile,knownIsoforms,fragSizeFile,readLen,lmax,eLenMin,discrim_genes){
   
 #------------------------------------------------------------------------------------------------------------------------------------#
