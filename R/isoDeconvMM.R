@@ -272,7 +272,7 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files,
   
   concat_geneMod = cluster_info(countData = countData, labels = labels, cellTypes = cellTypes, 
                                 bedFile = bedFile_info, discrim_genes = discrim_genes,
-                                discrim_clusts = discrim_clusts)
+                                discrim_clusts = discrim_clusts, readLen = readLen, lmax = lmax)
   
   final_geneMod = list()
   
@@ -328,13 +328,6 @@ IsoDeconvMM = function(directory = NULL, mix_files, pure_ref_files,
   
   print("Finished pure cell type parameter estimation")
   # time3 = proc.time()
-  #-------------------------------------------------------------------#
-  # Testing purposes only: Simulation    
-  # If only have one reference sample for each pure cell type,
-  # simulate additional sample counts 
-  # Use pure cell type parameter estimates from Step 3 to simulate
-  # additional counts
-  #-------------------------------------------------------------------#
   
   # Step 4
   #------------------------------------------------------------------------------#
