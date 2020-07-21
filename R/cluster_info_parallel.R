@@ -4,7 +4,6 @@
 #' @import parallel
 #' @import doParallel
 #' @importFrom pbapply pboptions pblapply
-#' @export
 cluster_info_parallel = function(countData, labels, cellTypes, bedFile, discrim_genes, 
                                  discrim_clusts, readLen, lmax, max_cores = 1, cluster_type){
   
