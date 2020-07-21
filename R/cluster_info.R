@@ -1,7 +1,7 @@
 
 #' @importFrom stringr str_split
-#' @export
-cluster_info = function(countData, labels, cellTypes, bedFile, discrim_genes, discrim_clusts){
+cluster_info = function(countData, labels, cellTypes, bedFile, discrim_genes, discrim_clusts,
+                        readLen, lmax){
   
   #------------------------------------------------------------------------------------------------------------------------------------#
   # LOADING THE DATA                                                                                                                   #
